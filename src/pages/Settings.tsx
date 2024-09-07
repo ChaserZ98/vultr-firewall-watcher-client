@@ -1,7 +1,7 @@
 export default function Settings() {
     return (
-        <div>
-            <h1>Settings</h1>
+        <div className="w-full h-[1000px]">
+            <div>Settings</div>
         </div>
     );
 }

@@ -1,3 +1,5 @@
+import { useCallback, useState } from "react";
+
 import { mdiContentCopy, mdiRefresh } from "@mdi/js";
 import Icon from "@mdi/react";
 import {
@@ -9,7 +11,6 @@ import {
     TableRow,
     Tooltip,
 } from "@nextui-org/react";
-import { useCallback, useState } from "react";
 import { toast } from "react-toastify";
 
 export default function MyIPTable() {
@@ -63,7 +64,7 @@ export default function MyIPTable() {
     );
 
     return (
-        <div className="flex flex-col px-8 gap-4 items-center">
+        <div className="flex flex-col px-8 gap-4 items-center select-none">
             <h2 className="text-2xl font-bold">My Public IP Addresses</h2>
             <Table aria-label="IP Table">
                 <TableHeader className="select-none">
@@ -89,7 +90,7 @@ export default function MyIPTable() {
                             <TableCell className="select-none">
                                 {version}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="select-none">
                                 <div className="flex items-center justify-center gap-2">
                                     <span className="flex-1">
                                         {version === "IPv4"

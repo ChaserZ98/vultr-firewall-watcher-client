@@ -10,13 +10,16 @@ export const ThemeContext = createContext<[Theme, Dispatch<{ type: string }>]>([
     () => {},
 ]);
 
-function switchOGImageThemeParam(element: HTMLMetaElement) {
+// This function will switch the theme parameter in the OG image URL
+function switchOGImageThemeParam(element: HTMLMetaElement | null) {
+    if (!element) return;
+
     const ogImageURL = element.getAttribute("content");
     if (ogImageURL) {
         const newURL = new URL(ogImageURL);
         newURL.searchParams.set(
             "theme",
-            document.documentElement.dataset.theme || Theme.DARK
+            document.body.dataset.theme || Theme.DARK
         );
         element.setAttribute("content", newURL.toString());
     }
@@ -27,17 +30,15 @@ export const themeReducer = (state: Theme, action: { type: string }) => {
         case "TOGGLE":
             const newTheme = state === Theme.LIGHT ? Theme.DARK : Theme.LIGHT;
             localStorage.setItem("theme", newTheme);
-            document.documentElement.dataset.theme = newTheme;
+            document.body.dataset.theme = newTheme;
+
             switchOGImageThemeParam(
-                document.querySelector(
-                    'meta[property="og:image"]'
-                ) as HTMLMetaElement
+                document.querySelector('meta[property="og:image"]')
             );
             switchOGImageThemeParam(
-                document.querySelector(
-                    'meta[name="twitter:image"]'
-                ) as HTMLMetaElement
+                document.querySelector('meta[name="twitter:image"]')
             );
+
             return newTheme;
         default:
             throw new Error(`Unhandled action type: ${action.type}`);
@@ -60,7 +61,7 @@ export const useTheme = () => {
             localStorage.setItem("theme", cachedTheme);
         }
         cachedTheme === Theme.DARK
-            ? (document.documentElement.dataset.theme = cachedTheme)
+            ? (document.body.dataset.theme = cachedTheme)
             : themeDispatch({ type: "TOGGLE" });
     }, []);
 

@@ -9,7 +9,7 @@ export const EnvironmentContext = createContext<Environment>(Environment.WEB);
 
 export const useEnvironment = () => {
     const [environment, _] = useState(
-        "__TAURI__" in window ? Environment.TAURI : Environment.WEB
+        "__TAURI_INTERNALS__" in window ? Environment.TAURI : Environment.WEB
     );
     return environment;
 };

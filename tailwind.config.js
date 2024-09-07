@@ -1,4 +1,5 @@
 const { nextui } = require("@nextui-org/react");
+const tailwindScrollbar = require("tailwind-scrollbar");
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -16,5 +17,6 @@ export default {
             prefix: "nextui",
             addCommonColors: false,
         }),
+        tailwindScrollbar,
     ],
 };

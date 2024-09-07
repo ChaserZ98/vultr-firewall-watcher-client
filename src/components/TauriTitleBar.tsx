@@ -1,3 +1,6 @@
+import { useCallback, useContext, useEffect, useState } from "react";
+
+import tauriNotify from "@/hooks/notification";
 import {
     Environment,
     EnvironmentContext,
@@ -9,22 +12,29 @@ import {
     mdiWindowRestore,
 } from "@mdi/js";
 import Icon from "@mdi/react";
-import { appWindow } from "@tauri-apps/api/window";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export default function TauriTitleBar() {
     const environment = useContext(EnvironmentContext);
     if (environment !== Environment.TAURI) return <></>;
 
     const [isMaximized, setIsMaximized] = useState(false);
+    const [isFirstClosed, setIsFirstClosed] = useState(true);
 
     const updateMaximizeStatus = useCallback(async () => {
-        setIsMaximized(await appWindow.isMaximized());
+        setIsMaximized(await getCurrentWindow().isMaximized());
     }, []);
     const onWindowDrag = useCallback(
         async (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+            if (e.buttons !== 1) return;
+
             e.preventDefault();
-            await appWindow.startDragging();
+            if (e.detail === 2) {
+                await getCurrentWindow().toggleMaximize();
+                setIsMaximized(await getCurrentWindow().isMaximized());
+            } else {
+                await getCurrentWindow().startDragging();
+            }
         },
         []
     );
@@ -32,7 +42,7 @@ export default function TauriTitleBar() {
         async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
             e.preventDefault();
             e.stopPropagation();
-            await appWindow.minimize();
+            await getCurrentWindow().minimize();
         },
         []
     );
@@ -40,8 +50,8 @@ export default function TauriTitleBar() {
         async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
             e.preventDefault();
             e.stopPropagation();
-            await appWindow.toggleMaximize();
-            setIsMaximized(await appWindow.isMaximized());
+            await getCurrentWindow().toggleMaximize();
+            setIsMaximized(await getCurrentWindow().isMaximized());
         },
         []
     );
@@ -49,16 +59,24 @@ export default function TauriTitleBar() {
         async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
             e.preventDefault();
             e.stopPropagation();
-            await appWindow.hide();
+
+            await getCurrentWindow().hide();
+
+            if (isFirstClosed) {
+                await tauriNotify(
+                    "The application is still running in the background."
+                );
+                setIsFirstClosed(false);
+            }
         },
-        []
+        [isFirstClosed]
     );
 
     useEffect(() => {
         updateMaximizeStatus();
         let unlistenResize = () => {};
         const listenResize = async () => {
-            unlistenResize = await appWindow.onResized(() => {
+            unlistenResize = await getCurrentWindow().onResized(() => {
                 updateMaximizeStatus();
             });
         };
@@ -70,19 +88,19 @@ export default function TauriTitleBar() {
 
     return (
         <div
-            className="flex relative w-full h-8 items-center justify-center select-none"
+            className="sticky flex w-full h-[30px] items-center justify-center select-none z-50"
             onMouseDown={onWindowDrag}
         >
             <div className="absolute flex right-0 h-full items-center justify-center">
                 <button
-                    className="text-default-400 h-full px-2 hover:bg-default-400 hover:text-default-foreground cursor-default"
+                    className="text-default-400 h-full px-2 hover:bg-default-400 hover:text-default-foreground cursor-default transition-colors-opacity duration-75"
                     onMouseDown={(e) => e.stopPropagation()}
                     onMouseUp={onWindowMinimize}
                 >
-                    <Icon path={mdiWindowMinimize} size={1.25} />
+                    <Icon path={mdiWindowMinimize} size={1} />
                 </button>
                 <button
-                    className="text-default-400 h-full px-2 hover:bg-default-400 hover:text-default-foreground cursor-default"
+                    className="text-default-400 h-full px-2 hover:bg-default-400 hover:text-default-foreground cursor-default transition-colors-opacity duration-75"
                     onMouseUp={onWindowMaximize}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
@@ -90,20 +108,20 @@ export default function TauriTitleBar() {
                         path={
                             isMaximized ? mdiWindowRestore : mdiWindowMaximize
                         }
-                        size={1.25}
+                        size={1}
                     />
                 </button>
                 <button
-                    className="text-default-400 h-full px-2 hover:bg-danger hover:text-default-foreground cursor-default"
+                    className="text-default-400 h-full px-2 hover:bg-danger hover:text-default-foreground cursor-default transition-colors-opacity duration-75"
                     onMouseUp={onWindowClose}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
-                    <Icon path={mdiWindowClose} size={1.25} />
+                    <Icon path={mdiWindowClose} size={1} />
                 </button>
             </div>
-            <div>
-                <h1 className="text-default-400">Vultr Firewall Watcher</h1>
-            </div>
+            <h1 className="text-default-400 font-bold text-medium">
+                Vultr Firewall Watcher
+            </h1>
         </div>
     );
 }
