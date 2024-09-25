@@ -1,8 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 
 import { mdiContentCopy, mdiRefresh } from "@mdi/js";
 import Icon from "@mdi/react";
 import {
+    Button,
+    Switch,
     Table,
     TableBody,
     TableCell,
@@ -13,149 +15,185 @@ import {
 } from "@nextui-org/react";
 import { toast } from "react-toastify";
 
-export default function MyIPTable() {
-    const [ipv4, setIPv4] = useState("");
-    const [isIpv4Refreshing, setIsIPv4Refreshing] = useState(false);
-    const [ipv6, setIPv6] = useState("");
-    const [isIpv6Refreshing, setIsIPv6Refreshing] = useState(false);
+import { Version as IPVersion, useIPStore } from "@/zustand/ip";
+import { useSettingsStore } from "@/zustand/settings";
 
-    const onAddressRefresh = useCallback(async (version: string) => {
-        const endpoint =
-            version === "IPv4"
-                ? "https://api.ipify.org"
-                : "https://api6.ipify.org";
-        version === "IPv4"
-            ? setIsIPv4Refreshing(true)
-            : setIsIPv6Refreshing(true);
-        await fetch(`${endpoint}?format=json`)
-            .then((res) => {
-                res.json().then((data) => {
-                    version === "IPv4" ? setIPv4(data.ip) : setIPv6(data.ip);
-                });
-            })
-            .catch((err) => {
-                version === "IPv4" ? setIPv4("") : setIPv6("");
+export default function MyIPTable() {
+    const ipv4 = useIPStore((state) => state[IPVersion.V4]);
+    const ipv6 = useIPStore((state) => state[IPVersion.V6]);
+    const refreshIP = useIPStore((state) => state.refresh);
+    const settings = useSettingsStore((state) => state.settings);
+    const setSettings = useSettingsStore((state) => state.setSettings);
+
+    const refresh = useCallback(
+        (version: IPVersion, useProxy: boolean) => {
+            if (useProxy && settings.proxyAddress === "") {
                 toast.error(
-                    `Failed to fetch ${version} address. Error: ${err}`
+                    <>
+                        <p>Proxy address is not set.</p>
+                        <p>Please set it in settings before using a proxy.</p>
+                    </>
                 );
-            });
-        version === "IPv4"
-            ? setIsIPv4Refreshing(false)
-            : setIsIPv6Refreshing(false);
-    }, []);
-    const onAddressCopy = useCallback(
-        (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-            e.preventDefault();
-            const res =
-                e.currentTarget.parentElement?.parentElement?.firstChild
-                    ?.textContent;
-            if (!res || res === "Unknown") return;
-            navigator.clipboard.writeText(res);
-            toast.success("Copied to clipboard", {
-                autoClose: 1000,
-                hideProgressBar: true,
-                pauseOnHover: false,
-                pauseOnFocusLoss: false,
-                closeOnClick: false,
-                closeButton: false,
-            });
+                return;
+            }
+            const proxy = useProxy
+                ? {
+                      http: settings.proxyAddress,
+                      https: settings.proxyAddress,
+                  }
+                : undefined;
+            refreshIP(version, proxy);
         },
-        []
+        [settings]
     );
 
     return (
         <div className="flex flex-col px-8 gap-4 items-center select-none">
-            <h2 className="text-2xl font-bold">My Public IP Addresses</h2>
-            <Table aria-label="IP Table">
-                <TableHeader className="select-none">
-                    <TableColumn align="center">
-                        IP Protocol Version
-                    </TableColumn>
+            <h2 className="text-lg font-bold text-foreground transition-colors-opacity sm:text-2xl">
+                My Public IP Addresses
+            </h2>
+            <Table
+                aria-label="IP Table"
+                className="text-wrap"
+                classNames={{
+                    wrapper: "transition-colors-opacity",
+                    th: "transition-colors-opacity text-xs sm:text-sm",
+                    td: "transition-colors-opacity text-sm sm:text-base",
+                }}
+            >
+                <TableHeader>
+                    <TableColumn align="center">Version</TableColumn>
                     <TableColumn align="center">Address</TableColumn>
+                    <TableColumn align="center" width={64}>
+                        Action
+                    </TableColumn>
                 </TableHeader>
                 <TableBody>
-                    {["IPv4", "IPv6"].map((version) => (
+                    {Object.values(IPVersion).map((version) => (
                         <TableRow
                             key={version}
                             className={
-                                version === "IPv4"
-                                    ? isIpv4Refreshing
-                                        ? "animate-pulse"
-                                        : ""
-                                    : isIpv6Refreshing
+                                (version === IPVersion.V4 && ipv4.refreshing) ||
+                                (version === IPVersion.V6 && ipv6.refreshing)
                                     ? "animate-pulse"
                                     : ""
                             }
                         >
-                            <TableCell className="select-none">
-                                {version}
+                            <TableCell className="text-foreground font-mono">
+                                {version === IPVersion.V4 ? "IPv4" : "IPv6"}
                             </TableCell>
-                            <TableCell className="select-none">
-                                <div className="flex items-center justify-center gap-2">
-                                    <span className="flex-1">
-                                        {version === "IPv4"
-                                            ? ipv4 || "Unknown"
-                                            : ipv6 || "Unknown"}
-                                    </span>
-                                    <div className="flex items-center justify-center gap-1">
-                                        {(version === "IPv4" && ipv4) ||
-                                        (version === "IPv6" && ipv6) ? (
-                                            <>
-                                                <Tooltip
-                                                    content="Copy"
-                                                    delay={1000}
-                                                >
-                                                    <button
-                                                        className="text-default-400 transition-colors-opacity duration-300 ease hover:text-primary-500"
-                                                        onClick={onAddressCopy}
-                                                    >
-                                                        <Icon
-                                                            path={
-                                                                mdiContentCopy
-                                                            }
-                                                            size={0.75}
-                                                            className="cursor-pointer"
-                                                        />
-                                                    </button>
-                                                </Tooltip>
-                                            </>
-                                        ) : (
-                                            <></>
-                                        )}
-                                        <Tooltip content="Refresh" delay={1000}>
-                                            <button
-                                                className="text-default-400 transition-colors-opacity duration-300 ease hover:text-primary-500"
-                                                onClick={() =>
-                                                    onAddressRefresh(version)
-                                                }
-                                                disabled={
-                                                    (version === "IPv4" &&
-                                                        isIpv4Refreshing) ||
-                                                    (version === "IPv6" &&
-                                                        isIpv6Refreshing)
-                                                }
+                            <TableCell className="text-foreground font-mono">
+                                <span className="break-all">
+                                    {version === IPVersion.V4
+                                        ? ipv4.refreshing
+                                            ? "Refreshing..."
+                                            : ipv4.value || "Unknown"
+                                        : ipv6.refreshing
+                                        ? "Refreshing..."
+                                        : ipv6.value || "Unknown"}
+                                </span>
+                            </TableCell>
+                            <TableCell className="sm:flex sm:justify-center">
+                                <div className="flex w-[64px] items-center justify-end">
+                                    {((version === IPVersion.V4 &&
+                                        ipv4.value) ||
+                                        (version === IPVersion.V6 &&
+                                            ipv6.value)) && (
+                                        <Tooltip
+                                            content="Copy"
+                                            delay={1000}
+                                            closeDelay={100}
+                                        >
+                                            <Button
+                                                isIconOnly
+                                                size="sm"
+                                                variant="light"
+                                                color="primary"
+                                                className="text-default-400 transition-colors-opacity hover:text-primary-500"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(
+                                                        version === IPVersion.V4
+                                                            ? ipv4.value
+                                                            : ipv6.value
+                                                    );
+                                                    toast.success(
+                                                        "Copied to clipboard",
+                                                        {
+                                                            autoClose: 1000,
+                                                            hideProgressBar:
+                                                                true,
+                                                            pauseOnHover: false,
+                                                            pauseOnFocusLoss:
+                                                                false,
+                                                            closeOnClick: false,
+                                                            closeButton: false,
+                                                        }
+                                                    );
+                                                }}
                                             >
                                                 <Icon
-                                                    path={mdiRefresh}
+                                                    path={mdiContentCopy}
                                                     size={0.75}
-                                                    className={
-                                                        (version === "IPv4" &&
-                                                            isIpv4Refreshing) ||
-                                                        (version === "IPv6" &&
-                                                            isIpv6Refreshing)
-                                                            ? "animate-spin"
-                                                            : ""
-                                                    }
+                                                    className="cursor-pointer"
                                                 />
-                                            </button>
+                                            </Button>
                                         </Tooltip>
-                                    </div>
+                                    )}
+                                    <Tooltip
+                                        content="Refresh"
+                                        delay={1000}
+                                        closeDelay={100}
+                                    >
+                                        <Button
+                                            isIconOnly
+                                            size="sm"
+                                            variant="light"
+                                            color="primary"
+                                            className="text-default-400 transition-colors-opacity hover:text-primary-500"
+                                            onClick={() =>
+                                                refresh(
+                                                    version,
+                                                    settings.useProxy
+                                                )
+                                            }
+                                            disabled={
+                                                (version === IPVersion.V4 &&
+                                                    ipv4.refreshing) ||
+                                                (version === IPVersion.V6 &&
+                                                    ipv6.refreshing)
+                                            }
+                                        >
+                                            <Icon
+                                                path={mdiRefresh}
+                                                size={0.75}
+                                                className={
+                                                    (version === IPVersion.V4 &&
+                                                        ipv4.refreshing) ||
+                                                    (version === IPVersion.V6 &&
+                                                        ipv6.refreshing)
+                                                        ? "animate-spin"
+                                                        : ""
+                                                }
+                                            />
+                                        </Button>
+                                    </Tooltip>
                                 </div>
                             </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
             </Table>
+            <Switch
+                isSelected={settings.useProxy}
+                onValueChange={() => {
+                    setSettings({ ...settings, useProxy: !settings.useProxy });
+                }}
+                classNames={{
+                    label: "text-foreground transition-colors-opacity",
+                }}
+            >
+                {`Proxy ${settings.useProxy ? "On" : "Off"}`}
+            </Switch>
         </div>
     );
 }

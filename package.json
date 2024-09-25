@@ -14,15 +14,18 @@
         "@mdi/react": "^1.6.1",
         "@nextui-org/react": "^2.4.6",
         "@tauri-apps/api": ">=2.0.0-rc.0",
+        "@tauri-apps/plugin-http": "^2.0.0-rc.2",
         "@tauri-apps/plugin-notification": "^2.0.0-rc.1",
         "@tauri-apps/plugin-shell": ">=2.0.0-rc.0",
         "framer-motion": "^11.4.0",
+        "immer": "^10.1.1",
         "path": "^0.12.7",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-router-dom": "^6.26.1",
         "react-toastify": "^10.0.5",
-        "tailwind-scrollbar": "^3.1.0"
+        "tailwind-scrollbar": "^3.1.0",
+        "zustand": "^5.0.0-rc.2"
     },
     "devDependencies": {
         "@tauri-apps/cli": ">=2.0.0-rc.0",

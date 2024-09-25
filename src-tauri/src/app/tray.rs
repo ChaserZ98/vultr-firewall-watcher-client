@@ -31,7 +31,7 @@ fn system_tray_event_handler(tray: &TrayIcon, event: TrayIconEvent, menu: &Menu<
             button: MouseButton::Right,
             button_state: MouseButtonState::Up,
             ..
-        } => right_click_handler(tray, &menu),
+        } => right_click_handler(tray, menu),
         _ => {}
     }
 }

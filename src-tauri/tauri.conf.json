@@ -3,12 +3,22 @@
     "version": "0.1.0",
     "identifier": "com.vultr-firewall-watcher-client.app",
     "build": {
-        "beforeDevCommand": "bun run dev",
-        "devUrl": "http://localhost:1420",
+        "beforeDevCommand": "bun run dev --host",
+        "devUrl": "http://127.0.0.1:1420",
         "beforeBuildCommand": "bun run build",
         "frontendDist": "../dist"
     },
     "bundle": {
+        "windows": {
+            "wix": {
+                "language": ["en-US", "zh-CN"]
+            },
+            "nsis": {
+                "displayLanguageSelector": true,
+                "installMode": "both",
+                "languages": ["English", "SimpChinese"]
+            }
+        },
         "active": true,
         "targets": "all",
         "longDescription": "Vultr Firewall Watcher is a desktop application that helps you monitor your Vultr firewall rules.",

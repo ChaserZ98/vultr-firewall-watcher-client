@@ -1,10 +1,6 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import tauriNotify from "@/hooks/notification";
-import {
-    Environment,
-    EnvironmentContext,
-} from "@hooks/environment/environment";
 import {
     mdiWindowClose,
     mdiWindowMaximize,
@@ -12,11 +8,15 @@ import {
     mdiWindowRestore,
 } from "@mdi/js";
 import Icon from "@mdi/react";
+import { Image } from "@nextui-org/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { Environment, useEnvironmentStore } from "@/zustand/environment";
+import appIcon from "@img/app-icon.png";
+
 export default function TauriTitleBar() {
-    const environment = useContext(EnvironmentContext);
-    if (environment !== Environment.TAURI) return <></>;
+    const environment = useEnvironmentStore((state) => state.environment);
+    if (environment !== Environment.DESKTOP) return <></>;
 
     const [isMaximized, setIsMaximized] = useState(false);
     const [isFirstClosed, setIsFirstClosed] = useState(true);
@@ -73,6 +73,12 @@ export default function TauriTitleBar() {
     );
 
     useEffect(() => {
+        console.log(
+            `Current platform: ${environment}\nCurrent mode: ${
+                import.meta.env.MODE
+            }`
+        );
+
         updateMaximizeStatus();
         let unlistenResize = () => {};
         const listenResize = async () => {
@@ -81,17 +87,31 @@ export default function TauriTitleBar() {
             });
         };
         listenResize();
+        const preventContextMenu = (e: MouseEvent) => e.preventDefault();
+
+        const preventRefreshKey = import.meta.env.PROD
+            ? (e: KeyboardEvent) => {
+                  if (e.key === "F5" || (e.key === "r" && e.ctrlKey))
+                      e.preventDefault();
+              }
+            : () => {};
+
+        document.addEventListener("contextmenu", preventContextMenu);
+        document.addEventListener("keydown", preventRefreshKey);
+
         return () => {
             unlistenResize();
+            document.removeEventListener("contextmenu", preventContextMenu);
+            document.removeEventListener("keydown", preventRefreshKey);
         };
     }, []);
 
     return (
         <div
-            className="sticky flex w-full h-[30px] items-center justify-center select-none z-50"
+            className="sticky flex w-full h-8 select-none z-50"
             onMouseDown={onWindowDrag}
         >
-            <div className="absolute flex right-0 h-full items-center justify-center">
+            <div className="absolute flex items-center justify-center right-0 h-full">
                 <button
                     className="text-default-400 h-full px-2 hover:bg-default-400 hover:text-default-foreground cursor-default transition-colors-opacity duration-75"
                     onMouseDown={(e) => e.stopPropagation()}
@@ -119,9 +139,16 @@ export default function TauriTitleBar() {
                     <Icon path={mdiWindowClose} size={1} />
                 </button>
             </div>
-            <h1 className="text-default-400 font-bold text-medium">
-                Vultr Firewall Watcher
-            </h1>
+            <div className="mx-0 flex items-center justify-center gap-1 sm:mx-auto">
+                <Image
+                    alt="Vultr Firewall Watcher Logo"
+                    src={appIcon}
+                    className="px-1 w-10"
+                />
+                <h1 className="hidden text-default-400 font-bold text-medium sm:block">
+                    Vultr Firewall Watcher
+                </h1>
+            </div>
         </div>
     );
 }

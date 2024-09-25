@@ -1,0 +1,416 @@
+import { useCallback, useEffect, useRef } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import {
+    Button,
+    Divider,
+    Modal,
+    ModalBody,
+    ModalContent,
+    ModalFooter,
+    ModalHeader,
+    Switch,
+    Tab,
+    Tabs,
+    Tooltip,
+    useDisclosure,
+} from "@nextui-org/react";
+import { toast } from "react-toastify";
+
+import RulesTable from "@/components/Firewall/Rules/RulesTable";
+import { useFirewallStore } from "@/zustand/firewall/firewall";
+import { initialGroupState } from "@/zustand/firewall/groups";
+import {
+    NewRuleState,
+    newRuleStateToCreateRule,
+    portToProtocol,
+    RuleState,
+} from "@/zustand/firewall/rules";
+import { Version as IPVersion } from "@/zustand/ip";
+import { Screen, useScreenStore } from "@/zustand/screen";
+import { Settings, useSettingsStore } from "@/zustand/settings";
+
+function getRelativeTimeString(date: string) {
+    const now = new Date();
+    const then = new Date(date);
+
+    let diff = Math.round((now.getTime() - then.getTime()) / 1000);
+    if (diff < 60) return "Just now";
+    if (diff < 3600) {
+        const minutes = Math.floor(diff / 60);
+        return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    }
+    if (diff < 86400) {
+        const hours = Math.floor(diff / 3600);
+        return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    }
+    if (diff < 604800) {
+        const days = Math.floor(diff / 86400);
+        return `${days} day${days === 1 ? "" : "s"} ago`;
+    }
+    if (diff < 2592000) {
+        const weeks = Math.floor(diff / 604800);
+        return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
+    }
+    if (diff < 31536000) {
+        const months = Math.floor(diff / 2592000);
+        return `${months} month${months === 1 ? "" : "s"} ago`;
+    }
+    const years = Math.floor(diff / 31536000);
+    return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+
+export default function Rules() {
+    const { id = "" } = useParams<{ id: string }>();
+
+    const screenSize = useScreenStore((state) => state.size);
+
+    const navigate = useNavigate();
+
+    const settings = useSettingsStore((state) => state.settings);
+    const setSettings = useSettingsStore((state) => state.setSettings);
+
+    const group =
+        useFirewallStore((state) => state.groups[id]) || initialGroupState;
+    const rules = useFirewallStore((state) => state.groups[id]?.rules) || {};
+    const refreshing =
+        useFirewallStore((state) => state.groups[id]?.refreshing) || false;
+    const refreshRules = useFirewallStore((state) => state.refreshRules);
+    const deleteRuleById = useFirewallStore((state) => state.deleteRuleById);
+    const createRule = useFirewallStore((state) => state.createRule);
+    const setNewRule = useFirewallStore((state) => state.setNewRule);
+
+    const deleteModal = useDisclosure();
+
+    const selectedRule = useRef<RuleState | null>(null);
+    const deleteTimeoutId = useRef<number | null>(null);
+
+    const refresh = useCallback((id: string, settings: Settings) => {
+        if (!id) {
+            toast.error(`Empty group ID`);
+            return;
+        }
+        refreshRules(
+            id,
+            settings.apiToken,
+            settings.useProxy
+                ? {
+                      http: settings.proxyAddress,
+                      https: settings.proxyAddress,
+                  }
+                : undefined
+        );
+    }, []);
+
+    const onRuleDelete = useCallback((rule: RuleState) => {
+        deleteTimeoutId.current && clearTimeout(deleteTimeoutId.current);
+        selectedRule.current = rule;
+        deleteModal.onOpen();
+    }, []);
+    const onRuleCreate = useCallback((rule: NewRuleState) => {
+        const newRule = newRuleStateToCreateRule(rule);
+        createRule(
+            group.id,
+            newRule,
+            settings.apiToken,
+            settings.useProxy
+                ? {
+                      http: settings.proxyAddress,
+                      https: settings.proxyAddress,
+                  }
+                : undefined
+        );
+    }, []);
+    const onRuleChange = useCallback((rule: NewRuleState) => {
+        setNewRule(group.id, rule);
+    }, []);
+
+    useEffect(() => {
+        console.log(screenSize);
+    }, [screenSize]);
+
+    useEffect(() => {
+        if (!group.id) {
+            console.error(`Group with ID ${id} not found`);
+            toast.error(`Group with ID ${id} not found`);
+            navigate("/");
+            return;
+        }
+        if (group.id && group.meta === undefined) refresh(group.id, settings);
+    }, [group]);
+
+    return (
+        <div className="flex flex-col px-8 pb-4 gap-4 items-center select-none">
+            <h2 className="text-lg font-bold text-foreground transition-colors-opacity md:text-2xl">
+                Manage Firewall Group
+            </h2>
+            <div className="flex w-full items-center justify-center gap-4">
+                <div className="text-xs md:text-sm">
+                    <span>Group ID: </span>
+                    <span className="font-bold font-mono">{id}</span>
+                </div>
+                <div className="text-xs md:text-sm">
+                    <span>Created: </span>
+                    <Tooltip
+                        content={getRelativeTimeString(group.date_created)}
+                        delay={2000}
+                        closeDelay={500}
+                    >
+                        <span className="font-mono">
+                            {new Date(group.date_created).toLocaleString(
+                                Intl.DateTimeFormat().resolvedOptions().locale,
+                                {
+                                    timeZoneName: "short",
+                                    hour12: false,
+                                }
+                            )}
+                        </span>
+                    </Tooltip>
+                </div>
+                <div className="text-xs md:text-sm">
+                    <span>Modified: </span>
+                    <Tooltip
+                        content={getRelativeTimeString(group.date_created)}
+                        delay={2000}
+                        closeDelay={500}
+                    >
+                        <span className="font-mono">
+                            {new Date(group.date_created).toLocaleString(
+                                Intl.DateTimeFormat().resolvedOptions().locale,
+                                {
+                                    timeZoneName: "short",
+                                    hour12: false,
+                                }
+                            )}
+                        </span>
+                    </Tooltip>
+                </div>
+            </div>
+            <div className="flex items-center gap-4">
+                <div className="flex flex-col gap-2 items-center">
+                    <p className="text-default-400 text-sm md:text-base">
+                        Description
+                    </p>
+                    <p className="font-mono text-sm md:text-base">
+                        {group.description ? group.description : "[Empty]"}
+                    </p>
+                </div>
+                <Divider
+                    orientation="vertical"
+                    className="h-auto self-stretch bg-default-400"
+                />
+                <div className="flex flex-col gap-2 items-center">
+                    <p className="text-default-400 text-sm md:text-base">
+                        Group Rules
+                    </p>
+                    <p className="font-mono text-sm md:text-base">
+                        <span>{group.rule_count}</span>
+                        <span>/</span>
+                        <span>{group.max_rule_count}</span>
+                    </p>
+                </div>
+                <Divider
+                    orientation="vertical"
+                    className="h-auto self-stretch bg-default-400"
+                />
+                <div className="flex flex-col gap-2 items-center">
+                    <p className="text-default-400 text-sm  md:text-base">
+                        Linked Instances
+                    </p>
+                    <p className="font-mono text-sm md:text-base">
+                        {group.instance_count}
+                    </p>
+                </div>
+            </div>
+            <div className="flex flex-col w-full relative justify-between bg-content1 p-4 overflow-auto rounded-large shadow-small shadow-content1 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow] ease-[ease] duration-250 max-w-fit min-h-60">
+                <Tabs
+                    aria-label="Options"
+                    isVertical={screenSize === Screen.SM ? false : true}
+                    color="primary"
+                    radius="lg"
+                    size={screenSize === Screen.SM ? "sm" : "md"}
+                    variant="solid"
+                    classNames={{
+                        base: "w-full justify-center md:w-auto",
+                        tabList: "transition-colors-opacity bg-content2",
+                        cursor: "transition-colors-opacity",
+                        tab: "transition-colors-opacity",
+                        panel: "w-full flex justify-center py-2 md:py-3",
+                    }}
+                >
+                    <Tab key="IPv4" title="IPv4">
+                        <RulesTable
+                            ipVersion={IPVersion.V4}
+                            rules={Object.values(rules).filter(
+                                (rule) => rule.ip_type === IPVersion.V4
+                            )}
+                            newRule={group.newRule[IPVersion.V4]}
+                            refreshing={group.refreshing}
+                            onRuleDelete={onRuleDelete}
+                            onRuleCreate={onRuleCreate}
+                            onRuleChange={onRuleChange}
+                        />
+                    </Tab>
+                    <Tab key="IPv6" title="IPv6">
+                        <RulesTable
+                            ipVersion={IPVersion.V6}
+                            rules={Object.values(rules).filter(
+                                (rule) => rule.ip_type === IPVersion.V6
+                            )}
+                            newRule={group.newRule[IPVersion.V6]}
+                            refreshing={group.refreshing}
+                            onRuleDelete={onRuleDelete}
+                            onRuleCreate={onRuleCreate}
+                            onRuleChange={onRuleChange}
+                        />
+                    </Tab>
+                </Tabs>
+                <Modal
+                    backdrop="transparent"
+                    isOpen={deleteModal.isOpen}
+                    onClose={() => {
+                        deleteTimeoutId.current = setTimeout(() => {
+                            selectedRule.current = null;
+                        }, 1500);
+                        deleteModal.onClose();
+                    }}
+                    classNames={{
+                        base: "select-none",
+                    }}
+                >
+                    <ModalContent>
+                        {(onClose) => (
+                            <>
+                                <ModalHeader className="flex flex-col gap-1 text-danger-400">
+                                    Delete Firewall Rule
+                                </ModalHeader>
+                                <ModalBody>
+                                    <p>
+                                        Are you sure you want to delete this
+                                        rule?
+                                    </p>
+                                    <div className="text-warning">
+                                        <p>
+                                            <span>IP Version: </span>
+                                            <span className="font-mono">
+                                                {selectedRule.current
+                                                    ?.ip_type === IPVersion.V4
+                                                    ? "IPv4"
+                                                    : "IPv6"}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            <span>Protocol: </span>
+                                            <span className="font-mono uppercase">
+                                                {selectedRule.current
+                                                    ?.protocol +
+                                                    (portToProtocol(
+                                                        selectedRule.current
+                                                            ?.port || ""
+                                                    )
+                                                        ? `(${portToProtocol(
+                                                              selectedRule
+                                                                  .current
+                                                                  ?.port || ""
+                                                          )})`
+                                                        : "")}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            <span>Port: </span>
+                                            <span className="font-mono">
+                                                {selectedRule.current?.port}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            <span>Source Type: </span>
+                                            <span className="font-mono capitalize">
+                                                {selectedRule.current?.source}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            <span>Source Address: </span>
+                                            <span className="font-mono">
+                                                {`${selectedRule.current?.subnet}/${selectedRule.current?.subnet_size}`}
+                                            </span>
+                                        </p>
+                                        <p>
+                                            <span>Notes: </span>
+                                            <span className="font-mono">
+                                                {selectedRule.current?.notes}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </ModalBody>
+                                <ModalFooter>
+                                    <Button
+                                        color="primary"
+                                        isLoading={
+                                            selectedRule.current?.deleting
+                                        }
+                                        onClick={() => {
+                                            if (!selectedRule.current) {
+                                                console.error(
+                                                    `Delete rule operation failed: Rule ID is null`
+                                                );
+                                                toast.error(
+                                                    `Delete rule operation failed: Rule ID is null`
+                                                );
+                                                return;
+                                            }
+                                            selectedRule.current.deleting =
+                                                true;
+                                            deleteRuleById(
+                                                group.id,
+                                                selectedRule.current.id,
+                                                settings.apiToken,
+                                                settings.useProxy
+                                                    ? {
+                                                          http: settings.proxyAddress,
+                                                          https: settings.proxyAddress,
+                                                      }
+                                                    : undefined
+                                            ).finally(() => onClose());
+                                        }}
+                                    >
+                                        Confirm
+                                    </Button>
+                                    <Button
+                                        color="danger"
+                                        variant="light"
+                                        onClick={onClose}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </ModalFooter>
+                            </>
+                        )}
+                    </ModalContent>
+                </Modal>
+            </div>
+            <div className="flex gap-4 justify-center items-center flex-wrap">
+                <Button
+                    onClick={() => refresh(id, settings)}
+                    isLoading={refreshing}
+                >
+                    Refresh
+                </Button>
+                <Switch
+                    isSelected={settings.useProxy}
+                    onValueChange={() =>
+                        setSettings({
+                            ...settings,
+                            useProxy: !settings.useProxy,
+                        })
+                    }
+                    classNames={{
+                        base: "min-w-32",
+                        label: "text-foreground transition-colors-opacity",
+                    }}
+                >
+                    {`Proxy ${settings.useProxy ? "On" : "Off"}`}
+                </Switch>
+            </div>
+        </div>
+    );
+}

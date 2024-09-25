@@ -4,15 +4,15 @@ import {
     sendNotification,
 } from "@tauri-apps/plugin-notification";
 
-type param = string | { title: string; body: string };
+type Content = string | { title: string; body: string };
 
-export default async function tauriNotify(param: param) {
+export default async function tauriNotify(content: Content) {
     let permissionGranted = await isPermissionGranted();
     if (!permissionGranted) {
         const permission = await requestPermission();
         permissionGranted = permission === "granted";
     }
     if (permissionGranted) {
-        sendNotification(param);
+        sendNotification(content);
     }
 }
