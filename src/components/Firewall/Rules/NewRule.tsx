@@ -15,8 +15,8 @@ import {
     Protocol,
     ProtocolSelection,
     SourceType,
-} from "@/zustand/firewall/rules";
-import { Version as IPVersion, useIPStore } from "@/zustand/ip";
+} from "@zustand/firewall/rules";
+import { Version as IPVersion, useIPStore } from "@zustand/ip";
 
 const protocols = [
     {

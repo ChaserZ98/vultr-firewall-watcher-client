@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { mdiCog, mdiThemeLightDark } from "@mdi/js";
@@ -14,10 +15,9 @@ import {
     Tooltip,
 } from "@nextui-org/react";
 
-import { Environment, useEnvironmentStore } from "@/zustand/environment";
-import { Screen, useScreenStore } from "@/zustand/screen";
-import { useThemeStore } from "@/zustand/theme";
-import { useEffect, useState } from "react";
+import { Environment, useEnvironmentStore } from "@zustand/environment";
+import { Screen, useScreenStore } from "@zustand/screen";
+import { useThemeStore } from "@zustand/theme";
 
 export default function Navigation() {
     const location = useLocation();

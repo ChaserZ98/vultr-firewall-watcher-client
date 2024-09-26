@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 
-import tauriNotify from "@/hooks/notification";
 import {
     mdiWindowClose,
     mdiWindowMaximize,
@@ -11,8 +10,9 @@ import Icon from "@mdi/react";
 import { Image } from "@nextui-org/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import { Environment, useEnvironmentStore } from "@/zustand/environment";
+import tauriNotify from "@hooks/notification";
 import appIcon from "@img/app-icon.png";
+import { Environment, useEnvironmentStore } from "@zustand/environment";
 
 export default function TauriTitleBar() {
     const environment = useEnvironmentStore((state) => state.environment);

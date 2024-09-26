@@ -10,7 +10,6 @@ import {
     ModalContent,
     ModalFooter,
     ModalHeader,
-    Switch,
     Table,
     TableBody,
     TableCell,
@@ -22,37 +21,47 @@ import {
 } from "@nextui-org/react";
 import { toast } from "react-toastify";
 
-import { useFirewallStore } from "@/zustand/firewall/firewall";
-import { Settings, useSettingsStore } from "@/zustand/settings";
+import useFetch from "@/hooks/fetch";
+import ProxySwitch from "@components/ProxySwitch";
+import { Environment, useEnvironmentStore } from "@zustand/environment";
+import { useFirewallStore } from "@zustand/firewall/firewall";
+import { Settings, useSettingsStore } from "@zustand/settings";
 
 export default function GroupTable() {
+    const environment = useEnvironmentStore((state) => state.environment);
     const settings = useSettingsStore((state) => state.settings);
-    const setSettings = useSettingsStore((state) => state.setSettings);
     const groups = useFirewallStore((state) => state.groups);
     const refreshing = useFirewallStore((state) => state.refreshing);
     const refreshGroups = useFirewallStore((state) => state.refreshGroups);
     const deleteGroupById = useFirewallStore((state) => state.deleteGroupById);
+
+    const fetchClient = useFetch(
+        settings.useProxy
+            ? {
+                  proxy: {
+                      http: settings.proxyAddress,
+                      https: settings.proxyAddress,
+                  },
+              }
+            : undefined
+    );
 
     const selectedGroupId = useRef<string | null>(null);
     const deleteTimeoutId = useRef<number | null>(null);
 
     const deleteModal = useDisclosure();
 
-    const fetchGroups = useCallback((settings: Settings) => {
-        refreshGroups(
-            settings.apiToken,
-            settings.useProxy
-                ? {
-                      http: settings.proxyAddress,
-                      https: settings.proxyAddress,
-                  }
-                : undefined
-        );
-    }, []);
+    const fetchGroups = useCallback(
+        (settings: Settings, fetchClient: typeof fetch) => {
+            refreshGroups(settings.apiToken, fetchClient);
+        },
+        []
+    );
 
     useEffect(() => {
-        if (groups === undefined && settings.apiToken) fetchGroups(settings);
-    }, [groups]);
+        if (groups === undefined && settings.apiToken)
+            fetchGroups(settings, fetchClient);
+    }, [groups, fetchClient]);
 
     return (
         <div className="flex flex-col w-full max-w-fit gap-4 select-none md:px-8">
@@ -204,12 +213,7 @@ export default function GroupTable() {
                                         deleteGroupById(
                                             selectedGroupId.current,
                                             settings.apiToken,
-                                            settings.useProxy
-                                                ? {
-                                                      http: settings.proxyAddress,
-                                                      https: settings.proxyAddress,
-                                                  }
-                                                : undefined
+                                            fetchClient
                                         );
                                         onClose();
                                     }}
@@ -230,26 +234,12 @@ export default function GroupTable() {
             </Modal>
             <div className="flex gap-4 justify-center items-center flex-wrap">
                 <Button
-                    onClick={() => fetchGroups(settings)}
+                    onClick={() => fetchGroups(settings, fetchClient)}
                     isLoading={refreshing}
                 >
                     Refresh
                 </Button>
-                <Switch
-                    isSelected={settings.useProxy}
-                    onValueChange={() =>
-                        setSettings({
-                            ...settings,
-                            useProxy: !settings.useProxy,
-                        })
-                    }
-                    classNames={{
-                        base: "min-w-[130px]",
-                        label: "text-foreground transition-colors-opacity",
-                    }}
-                >
-                    {`Proxy ${settings.useProxy ? "On" : "Off"}`}
-                </Switch>
+                {environment !== Environment.WEB && <ProxySwitch />}
             </div>
         </div>
     );

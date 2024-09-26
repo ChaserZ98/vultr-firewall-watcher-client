@@ -1,8 +1,7 @@
-import { type Proxy, fetch as tauriFetch } from "@tauri-apps/plugin-http";
-
 import { produce } from "immer";
 import { toast } from "react-toastify";
 import { StoreApi } from "zustand";
+
 import { Version as IPVersion } from "../ip";
 import { type FirewallState } from "./firewall";
 
@@ -88,18 +87,22 @@ export type RulesMeta = {
 
 export type RulesAction = {
     setNewRule: (groupId: string, rule: NewRuleState) => void;
-    refreshRules: (id: string, apiToken: string, proxy?: Proxy) => void;
+    refreshRules: (
+        id: string,
+        apiToken: string,
+        fetchClient: typeof fetch
+    ) => void;
     deleteRuleById: (
         group_id: string,
         rule_id: number,
         apiToken: string,
-        proxy?: Proxy
+        fetchClient: typeof fetch
     ) => Promise<void>;
     createRule: (
         groupId: string,
         newRule: CreateRule,
         apiToken: string,
-        proxy?: Proxy
+        fetchClient: typeof fetch
     ) => void;
 };
 
@@ -123,49 +126,6 @@ export function portToProtocol(port: string): string {
             return "";
     }
 }
-
-// function toProtocolSelection(protocol: Protocol, port: string) {
-//     switch (true) {
-//         case protocol === Protocol.ICMP:
-//             return Protocol.ICMP;
-//         case protocol === Protocol.GRE:
-//             return Protocol.GRE;
-//         case protocol === Protocol.ESP:
-//             return Protocol.ESP;
-//         case protocol === Protocol.AH:
-//             return Protocol.AH;
-//         case protocol === Protocol.TCP:
-//             switch (port) {
-//                 case "22":
-//                     return "ssh";
-//                 case "80":
-//                     return "http";
-//                 case "443":
-//                     return "https";
-//                 case "3306":
-//                     return "mysql";
-//                 case "5432":
-//                     return "postgresql";
-//                 case "53":
-//                     return "dns-tcp";
-//                 case "3389":
-//                     return "ms-rdp";
-//                 default:
-//                     return Protocol.TCP;
-//             }
-//         case protocol === Protocol.UDP:
-//             switch (port) {
-//                 case "53":
-//                     return "dns-udp";
-//                 case "443":
-//                     return "http3";
-//                 default:
-//                     return Protocol.UDP;
-//             }
-//         default:
-//             return protocol;
-//     }
-// }
 
 function toRuleProtocol(protocol: ProtocolSelection): Protocol {
     switch (protocol) {
@@ -232,8 +192,10 @@ export function newRuleStateToCreateRule(
     };
 }
 
-function setNewRule(set: StoreApi<FirewallState>["setState"]) {
-    return (groupId: string, rule: NewRuleState) => {
+function setNewRule(
+    set: StoreApi<FirewallState>["setState"]
+): RulesAction["setNewRule"] {
+    return (groupId, rule) => {
         set(
             produce((state: FirewallState) => {
                 state.groups[groupId].newRule[rule.ip_type] = rule;
@@ -242,24 +204,21 @@ function setNewRule(set: StoreApi<FirewallState>["setState"]) {
     };
 }
 
-function refreshRules(set: StoreApi<FirewallState>["setState"]) {
-    return (id: string, apiToken: string, proxy?: Proxy) => {
-        console.log(
-            `Fetching rules for group ${id}${
-                proxy ? " using proxy " + JSON.stringify(proxy) : ""
-            }.`
-        );
+function refreshRules(
+    set: StoreApi<FirewallState>["setState"]
+): RulesAction["refreshRules"] {
+    return (id, apiToken, fetchClient) => {
+        console.log(`Fetching rules for group ${id}.`);
         set(
             produce((state: FirewallState) => {
                 state.groups[id].refreshing = true;
             })
         );
-        tauriFetch(endpoint(id), {
+        fetchClient(endpoint(id), {
             method: "GET",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
             },
-            proxy,
         })
             .then(async (res) => {
                 return {
@@ -304,9 +263,7 @@ function refreshRules(set: StoreApi<FirewallState>["setState"]) {
             .catch((err: Error) => {
                 console.error(`Failed to fetch firewall rules: ${err.message}`);
                 toast.error(
-                    `Failed to fetch firewall rules for group ${id}${
-                        proxy ? " using proxy " + JSON.stringify(proxy) : ""
-                    }: ${err.message}`
+                    `Failed to fetch firewall rules for group ${id}: ${err.message}`
                 );
                 set(
                     produce((state: FirewallState) => {
@@ -325,29 +282,21 @@ function refreshRules(set: StoreApi<FirewallState>["setState"]) {
     };
 }
 
-function deleteRuleById(set: StoreApi<FirewallState>["setState"]) {
-    return async (
-        groupId: string,
-        ruleId: number,
-        apiToken: string,
-        proxy?: Proxy
-    ) => {
-        console.log(
-            `Deleting the rule ${ruleId} in group ${groupId}${
-                proxy ? " using proxy " + JSON.stringify(proxy) : ""
-            }.`
-        );
+function deleteRuleById(
+    set: StoreApi<FirewallState>["setState"]
+): RulesAction["deleteRuleById"] {
+    return async (groupId, ruleId, apiToken, fetchClient) => {
+        console.log(`Deleting the rule ${ruleId} in group ${groupId}.`);
         set(
             produce((state: FirewallState) => {
                 state.groups[groupId].rules[ruleId].deleting = true;
             })
         );
-        await tauriFetch(endpoint(groupId, ruleId), {
+        await fetchClient(endpoint(groupId, ruleId), {
             method: "DELETE",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
             },
-            proxy,
         })
             .then(async (res) => {
                 if (!res.ok) {
@@ -375,42 +324,34 @@ function deleteRuleById(set: StoreApi<FirewallState>["setState"]) {
                     })
                 );
                 console.error(
-                    `Failed to delete firewall rule ${ruleId} in group ${groupId}${
-                        proxy ? " using proxy " + JSON.stringify(proxy) : ""
-                    }: ${err.message}`
+                    `Failed to delete firewall rule ${ruleId} in group ${groupId}: ${err.message}`
                 );
                 toast.error(`Failed to delete the rule: ${err.message}`);
             });
     };
 }
 
-function createRule(set: StoreApi<FirewallState>["setState"]) {
-    return (
-        groupId: string,
-        newRule: CreateRule,
-        apiToken: string,
-        proxy?: Proxy
-    ) => {
+function createRule(
+    set: StoreApi<FirewallState>["setState"]
+): RulesAction["createRule"] {
+    return (groupId, newRule, apiToken, fetchClient) => {
         console.log(
             `Creating a new rule ${JSON.stringify(
                 newRule
-            )} in group ${groupId}${
-                proxy ? " using proxy " + JSON.stringify(proxy) : ""
-            }.`
+            )} in group ${groupId}.`
         );
         set(
             produce((state: FirewallState) => {
                 state.groups[groupId].newRule[newRule.ip_type].creating = true;
             })
         );
-        tauriFetch(endpoint(groupId), {
+        fetchClient(endpoint(groupId), {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(newRule),
-            proxy,
         })
             .then(async (res) => {
                 const data = await res.json();
@@ -453,9 +394,7 @@ function createRule(set: StoreApi<FirewallState>["setState"]) {
                 console.error(
                     `Failed to create the rule ${JSON.stringify(
                         newRule
-                    )} in group ${groupId}${
-                        proxy ? " using proxy " + JSON.stringify(proxy) : ""
-                    }: ${err.message}`
+                    )} in group ${groupId}: ${err.message}`
                 );
                 toast.error(`Failed to create the rule: ${err.message}`);
             });

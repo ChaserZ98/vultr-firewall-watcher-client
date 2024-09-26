@@ -1,6 +1,5 @@
-import { Proxy, fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { toast } from "react-toastify";
-import { create } from "zustand";
+import { create, StoreApi } from "zustand";
 
 const IPv4Endpoints = ["https://api.ipify.org", "https://ipv4.seeip.org"];
 const IPv6Endpoints = ["https://api6.ipify.org", "https://ipv6.seeip.org"];
@@ -20,20 +19,12 @@ type State = {
     [Version.V6]: IPState;
 };
 
-type action = {
-    refresh(ipVersion: Version, proxy?: Proxy): void;
+type Action = {
+    refresh: (ipVersion: Version, fetchClient: typeof fetch) => void;
 };
 
-export const useIPStore = create<State & action>((set) => ({
-    [Version.V4]: {
-        value: "",
-        refreshing: false,
-    },
-    [Version.V6]: {
-        value: "",
-        refreshing: false,
-    },
-    refresh: (ipVersion: Version, proxy?: Proxy) => {
+function refresh(set: StoreApi<State>["setState"]): Action["refresh"] {
+    return (ipVersion, fetchClient) => {
         const endpoints =
             ipVersion === Version.V4 ? IPv4Endpoints : IPv6Endpoints;
         set(() => ({
@@ -47,15 +38,10 @@ export const useIPStore = create<State & action>((set) => ({
 
         const tasks: Promise<{ endpoint: string; data: string | null }>[] =
             endpoints.map((endpoint) => {
-                console.log(
-                    `Fetching ${ipVersion} address from ${endpoint}${
-                        proxy ? ` using proxy ${JSON.stringify(proxy)}` : ""
-                    }.`
-                );
+                console.log(`Fetching ${ipVersion} address from ${endpoint}.`);
 
-                return tauriFetch(endpoint, {
+                return fetchClient(endpoint, {
                     signal: controller.signal,
-                    proxy,
                 })
                     .then((response) => {
                         if (response.ok) return response.text();
@@ -107,5 +93,17 @@ export const useIPStore = create<State & action>((set) => ({
             }));
             toast.error(`Failed to fetch ${ipVersion} address.`);
         });
+    };
+}
+
+export const useIPStore = create<State & Action>((set) => ({
+    [Version.V4]: {
+        value: "",
+        refreshing: false,
     },
+    [Version.V6]: {
+        value: "",
+        refreshing: false,
+    },
+    refresh: refresh(set),
 }));

@@ -4,7 +4,6 @@ import { mdiContentCopy, mdiRefresh } from "@mdi/js";
 import Icon from "@mdi/react";
 import {
     Button,
-    Switch,
     Table,
     TableBody,
     TableCell,
@@ -15,19 +14,36 @@ import {
 } from "@nextui-org/react";
 import { toast } from "react-toastify";
 
-import { Version as IPVersion, useIPStore } from "@/zustand/ip";
-import { useSettingsStore } from "@/zustand/settings";
+import useClipboard from "@hooks/clipboard";
+import useFetch from "@hooks/fetch";
+import { Environment, useEnvironmentStore } from "@zustand/environment";
+import { Version as IPVersion, useIPStore } from "@zustand/ip";
+import { useSettingsStore } from "@zustand/settings";
+import ProxySwitch from "./ProxySwitch";
 
 export default function MyIPTable() {
+    const environment = useEnvironmentStore((state) => state.environment);
     const ipv4 = useIPStore((state) => state[IPVersion.V4]);
     const ipv6 = useIPStore((state) => state[IPVersion.V6]);
     const refreshIP = useIPStore((state) => state.refresh);
     const settings = useSettingsStore((state) => state.settings);
-    const setSettings = useSettingsStore((state) => state.setSettings);
+
+    const fetchClient = useFetch(
+        settings.useProxy
+            ? {
+                  proxy: {
+                      http: settings.proxyAddress,
+                      https: settings.proxyAddress,
+                  },
+              }
+            : undefined
+    );
+
+    const clipboard = useClipboard();
 
     const refresh = useCallback(
-        (version: IPVersion, useProxy: boolean) => {
-            if (useProxy && settings.proxyAddress === "") {
+        (version: IPVersion, fetchClient: typeof fetch) => {
+            if (settings.useProxy && settings.proxyAddress === "") {
                 toast.error(
                     <>
                         <p>Proxy address is not set.</p>
@@ -36,13 +52,7 @@ export default function MyIPTable() {
                 );
                 return;
             }
-            const proxy = useProxy
-                ? {
-                      http: settings.proxyAddress,
-                      https: settings.proxyAddress,
-                  }
-                : undefined;
-            refreshIP(version, proxy);
+            refreshIP(version, fetchClient);
         },
         [settings]
     );
@@ -111,24 +121,39 @@ export default function MyIPTable() {
                                                 color="primary"
                                                 className="text-default-400 transition-colors-opacity hover:text-primary-500"
                                                 onClick={() => {
-                                                    navigator.clipboard.writeText(
-                                                        version === IPVersion.V4
-                                                            ? ipv4.value
-                                                            : ipv6.value
-                                                    );
-                                                    toast.success(
-                                                        "Copied to clipboard",
-                                                        {
-                                                            autoClose: 1000,
-                                                            hideProgressBar:
-                                                                true,
-                                                            pauseOnHover: false,
-                                                            pauseOnFocusLoss:
-                                                                false,
-                                                            closeOnClick: false,
-                                                            closeButton: false,
-                                                        }
-                                                    );
+                                                    clipboard
+                                                        .writeText(
+                                                            version ===
+                                                                IPVersion.V4
+                                                                ? ipv4.value
+                                                                : ipv6.value
+                                                        )
+                                                        .then(() => {
+                                                            toast.success(
+                                                                "Copied to clipboard",
+                                                                {
+                                                                    autoClose: 1000,
+                                                                    hideProgressBar:
+                                                                        true,
+                                                                    pauseOnHover:
+                                                                        false,
+                                                                    pauseOnFocusLoss:
+                                                                        false,
+                                                                    closeOnClick:
+                                                                        false,
+                                                                    closeButton:
+                                                                        false,
+                                                                }
+                                                            );
+                                                        })
+                                                        .catch((e) => {
+                                                            console.error(
+                                                                `Failed to copy to clipboard: ${e}`
+                                                            );
+                                                            toast.error(
+                                                                "Failed to copy to clipboard"
+                                                            );
+                                                        });
                                                 }}
                                             >
                                                 <Icon
@@ -151,10 +176,7 @@ export default function MyIPTable() {
                                             color="primary"
                                             className="text-default-400 transition-colors-opacity hover:text-primary-500"
                                             onClick={() =>
-                                                refresh(
-                                                    version,
-                                                    settings.useProxy
-                                                )
+                                                refresh(version, fetchClient)
                                             }
                                             disabled={
                                                 (version === IPVersion.V4 &&
@@ -183,17 +205,7 @@ export default function MyIPTable() {
                     ))}
                 </TableBody>
             </Table>
-            <Switch
-                isSelected={settings.useProxy}
-                onValueChange={() => {
-                    setSettings({ ...settings, useProxy: !settings.useProxy });
-                }}
-                classNames={{
-                    label: "text-foreground transition-colors-opacity",
-                }}
-            >
-                {`Proxy ${settings.useProxy ? "On" : "Off"}`}
-            </Switch>
+            {environment !== Environment.WEB && <ProxySwitch />}
         </div>
     );
 }

@@ -9,7 +9,6 @@ import {
     ModalContent,
     ModalFooter,
     ModalHeader,
-    Switch,
     Tab,
     Tabs,
     Tooltip,
@@ -17,18 +16,21 @@ import {
 } from "@nextui-org/react";
 import { toast } from "react-toastify";
 
-import RulesTable from "@/components/Firewall/Rules/RulesTable";
-import { useFirewallStore } from "@/zustand/firewall/firewall";
-import { initialGroupState } from "@/zustand/firewall/groups";
+import RulesTable from "@components/Firewall/Rules/RulesTable";
+import ProxySwitch from "@components/ProxySwitch";
+import useFetch from "@hooks/fetch";
+import { Environment, useEnvironmentStore } from "@zustand/environment";
+import { useFirewallStore } from "@zustand/firewall/firewall";
+import { initialGroupState } from "@zustand/firewall/groups";
 import {
     NewRuleState,
     newRuleStateToCreateRule,
     portToProtocol,
     RuleState,
-} from "@/zustand/firewall/rules";
-import { Version as IPVersion } from "@/zustand/ip";
-import { Screen, useScreenStore } from "@/zustand/screen";
-import { Settings, useSettingsStore } from "@/zustand/settings";
+} from "@zustand/firewall/rules";
+import { Version as IPVersion } from "@zustand/ip";
+import { Screen, useScreenStore } from "@zustand/screen";
+import { Settings, useSettingsStore } from "@zustand/settings";
 
 function getRelativeTimeString(date: string) {
     const now = new Date();
@@ -63,12 +65,13 @@ function getRelativeTimeString(date: string) {
 export default function Rules() {
     const { id = "" } = useParams<{ id: string }>();
 
+    const environment = useEnvironmentStore((state) => state.environment);
+
     const screenSize = useScreenStore((state) => state.size);
 
     const navigate = useNavigate();
 
     const settings = useSettingsStore((state) => state.settings);
-    const setSettings = useSettingsStore((state) => state.setSettings);
 
     const group =
         useFirewallStore((state) => state.groups[id]) || initialGroupState;
@@ -80,47 +83,45 @@ export default function Rules() {
     const createRule = useFirewallStore((state) => state.createRule);
     const setNewRule = useFirewallStore((state) => state.setNewRule);
 
+    const fetchClient = useFetch(
+        settings.useProxy
+            ? {
+                  proxy: {
+                      http: settings.proxyAddress,
+                      https: settings.proxyAddress,
+                  },
+              }
+            : undefined
+    );
+
     const deleteModal = useDisclosure();
 
     const selectedRule = useRef<RuleState | null>(null);
     const deleteTimeoutId = useRef<number | null>(null);
 
-    const refresh = useCallback((id: string, settings: Settings) => {
-        if (!id) {
-            toast.error(`Empty group ID`);
-            return;
-        }
-        refreshRules(
-            id,
-            settings.apiToken,
-            settings.useProxy
-                ? {
-                      http: settings.proxyAddress,
-                      https: settings.proxyAddress,
-                  }
-                : undefined
-        );
-    }, []);
+    const refresh = useCallback(
+        (id: string, settings: Settings, fetchClient: typeof fetch) => {
+            if (!id) {
+                toast.error(`Empty group ID`);
+                return;
+            }
+            refreshRules(id, settings.apiToken, fetchClient);
+        },
+        []
+    );
 
     const onRuleDelete = useCallback((rule: RuleState) => {
         deleteTimeoutId.current && clearTimeout(deleteTimeoutId.current);
         selectedRule.current = rule;
         deleteModal.onOpen();
     }, []);
-    const onRuleCreate = useCallback((rule: NewRuleState) => {
-        const newRule = newRuleStateToCreateRule(rule);
-        createRule(
-            group.id,
-            newRule,
-            settings.apiToken,
-            settings.useProxy
-                ? {
-                      http: settings.proxyAddress,
-                      https: settings.proxyAddress,
-                  }
-                : undefined
-        );
-    }, []);
+    const onRuleCreate = useCallback(
+        (rule: NewRuleState) => {
+            const newRule = newRuleStateToCreateRule(rule);
+            createRule(group.id, newRule, settings.apiToken, fetchClient);
+        },
+        [settings, fetchClient]
+    );
     const onRuleChange = useCallback((rule: NewRuleState) => {
         setNewRule(group.id, rule);
     }, []);
@@ -136,8 +137,9 @@ export default function Rules() {
             navigate("/");
             return;
         }
-        if (group.id && group.meta === undefined) refresh(group.id, settings);
-    }, [group]);
+        if (group.id && group.meta === undefined)
+            refresh(group.id, settings, fetchClient);
+    }, [group, fetchClient, settings]);
 
     return (
         <div className="flex flex-col px-8 pb-4 gap-4 items-center select-none">
@@ -364,12 +366,7 @@ export default function Rules() {
                                                 group.id,
                                                 selectedRule.current.id,
                                                 settings.apiToken,
-                                                settings.useProxy
-                                                    ? {
-                                                          http: settings.proxyAddress,
-                                                          https: settings.proxyAddress,
-                                                      }
-                                                    : undefined
+                                                fetchClient
                                             ).finally(() => onClose());
                                         }}
                                     >
@@ -390,26 +387,12 @@ export default function Rules() {
             </div>
             <div className="flex gap-4 justify-center items-center flex-wrap">
                 <Button
-                    onClick={() => refresh(id, settings)}
+                    onClick={() => refresh(id, settings, fetchClient)}
                     isLoading={refreshing}
                 >
                     Refresh
                 </Button>
-                <Switch
-                    isSelected={settings.useProxy}
-                    onValueChange={() =>
-                        setSettings({
-                            ...settings,
-                            useProxy: !settings.useProxy,
-                        })
-                    }
-                    classNames={{
-                        base: "min-w-32",
-                        label: "text-foreground transition-colors-opacity",
-                    }}
-                >
-                    {`Proxy ${settings.useProxy ? "On" : "Off"}`}
-                </Switch>
+                {environment !== Environment.WEB && <ProxySwitch />}
             </div>
         </div>
     );

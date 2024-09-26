@@ -13,6 +13,7 @@ export default defineConfig(async () => ({
             "@pages": "/src/pages",
             "@components": "/src/components",
             "@hooks": "/src/hooks",
+            "@zustand": "/src/zustand",
         },
     },
 

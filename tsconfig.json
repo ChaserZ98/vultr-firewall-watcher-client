@@ -14,7 +14,8 @@
             "@img/*": ["./src/assets/img/*"],
             "@pages/*": ["./src/pages/*"],
             "@components/*": ["./src/components/*"],
-            "@hooks/*": ["./src/hooks/*"]
+            "@hooks/*": ["./src/hooks/*"],
+            "@zustand/*": ["./src/zustand/*"]
         },
 
         /* Bundler mode */

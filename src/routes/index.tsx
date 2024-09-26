@@ -8,7 +8,7 @@ const Home = lazy(() => import("@pages/Home.tsx"));
 const Settings = lazy(() => import("@pages/Settings.tsx"));
 const MyIP = lazy(() => import("@pages/MyIP.tsx"));
 
-const Rules = lazy(() => import("@/pages/Rules.tsx"));
+const Rules = lazy(() => import("@pages/Rules.tsx"));
 
 const Loading = ({ children }: { children: React.ReactNode }) => (
     <Suspense

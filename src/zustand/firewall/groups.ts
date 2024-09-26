@@ -1,10 +1,9 @@
-import { type Proxy, fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { produce } from "immer";
 import { toast } from "react-toastify";
 import { StoreApi } from "zustand";
-import { type FirewallState } from "./firewall";
 
 import { Version as IPVersion } from "../ip";
+import { type FirewallState } from "./firewall";
 import {
     initialNewRuleIPv4,
     initialNewRuleIPv6,
@@ -64,24 +63,25 @@ export type GroupsMeta = {
 };
 
 export type GroupsAction = {
-    refreshGroups: (apiToken: string, proxy?: Proxy) => void;
-    deleteGroupById: (id: string, apiToken: string, proxy?: Proxy) => void;
+    refreshGroups: (apiToken: string, fetchClient: typeof fetch) => void;
+    deleteGroupById: (
+        id: string,
+        apiToken: string,
+        fetchClient: typeof fetch
+    ) => void;
 };
 
-function refreshGroups(set: StoreApi<FirewallState>["setState"]) {
-    return (apiToken: string, proxy?: Proxy) => {
-        console.log(
-            `Fetching groups${
-                proxy ? " using proxy " + JSON.stringify(proxy) : ""
-            }.`
-        );
+function refreshGroups(
+    set: StoreApi<FirewallState>["setState"]
+): GroupsAction["refreshGroups"] {
+    return (apiToken, fetchClient) => {
+        console.log(`Fetching firewall groups.`);
         set(() => ({ refreshing: true }));
-        tauriFetch(endpoint, {
+        fetchClient(endpoint, {
             method: "GET",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
             },
-            proxy,
         })
             .then(async (res) => {
                 return {
@@ -122,9 +122,7 @@ function refreshGroups(set: StoreApi<FirewallState>["setState"]) {
             })
             .catch((err: Error) => {
                 console.error(
-                    `Failed to fetch firewall groups${
-                        proxy ? " using proxy " + JSON.stringify(proxy) : ""
-                    }: ${err.message}`
+                    `Failed to fetch firewall groups: ${err.message}`
                 );
                 toast.error(`Failed to fetch firewall groups: ${err.message}`);
                 set(() => ({ groups: {}, meta: null }));
@@ -133,19 +131,21 @@ function refreshGroups(set: StoreApi<FirewallState>["setState"]) {
     };
 }
 
-function deleteGroupById(set: StoreApi<FirewallState>["setState"]) {
-    return (id: string, apiToken: string, proxy?: Proxy) => {
+function deleteGroupById(
+    set: StoreApi<FirewallState>["setState"]
+): GroupsAction["deleteGroupById"] {
+    return (id, apiToken, fetchClient) => {
+        console.log(`Deleting group with ID ${id}.`);
         set(
             produce((state: FirewallState) => {
                 state.groups[id].deleting = true;
             })
         );
-        tauriFetch(new URL(`${endpoint}/${id}`), {
+        fetchClient(new URL(`${endpoint}/${id}`), {
             method: "DELETE",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
             },
-            proxy,
         })
             .then(async (res) => {
                 if (!res.ok) {
@@ -161,6 +161,7 @@ function deleteGroupById(set: StoreApi<FirewallState>["setState"]) {
                         delete state.groups[id];
                     })
                 );
+                console.log(`Successfully deleted group with ID ${id}`);
                 toast.success(`Successfully deleted group with ID ${id}`);
             })
             .catch((err: Error) => {

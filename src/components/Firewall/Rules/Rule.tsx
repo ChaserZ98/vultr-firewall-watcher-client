@@ -7,7 +7,7 @@ import {
     RuleInfo,
     RuleState,
     SourceType,
-} from "@/zustand/firewall/rules";
+} from "@zustand/firewall/rules";
 
 type FirewallRuleProps = RuleInfo & {
     loading: boolean;

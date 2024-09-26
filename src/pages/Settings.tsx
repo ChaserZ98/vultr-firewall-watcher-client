@@ -10,10 +10,13 @@ import {
     Input,
 } from "@nextui-org/react";
 
-import { useScreenStore } from "@/zustand/screen";
-import { useSettingsStore, type Settings } from "@/zustand/settings";
+import { Environment, useEnvironmentStore } from "@zustand/environment";
+import { useScreenStore } from "@zustand/screen";
+import { useSettingsStore, type Settings } from "@zustand/settings";
 
 export default function Settings() {
+    const environment = useEnvironmentStore((state) => state.environment);
+
     const screenSize = useScreenStore((state) => state.size);
 
     const settings = useSettingsStore((state) => state.settings);
@@ -65,26 +68,30 @@ export default function Settings() {
                                 input: "!text-default-500 focus:!text-foreground transition-colors-opacity",
                             }}
                         />
-                        <Divider />
-                        <h2 className="text-base text-foreground transition-colors-opacity sm:text-lg">
-                            Proxy
-                        </h2>
-                        <Input
-                            type="text"
-                            label="Address"
-                            size={screenSize === "sm" ? "sm" : "md"}
-                            placeholder="Enter http proxy address"
-                            value={tempSettings.proxyAddress}
-                            onChange={(e) =>
-                                setTempSettings({
-                                    ...tempSettings,
-                                    proxyAddress: e.target.value,
-                                })
-                            }
-                            classNames={{
-                                input: "!text-default-500 focus:!text-foreground transition-colors-opacity",
-                            }}
-                        />
+                        {environment !== Environment.WEB && (
+                            <>
+                                <Divider />
+                                <h2 className="text-base text-foreground transition-colors-opacity sm:text-lg">
+                                    Proxy
+                                </h2>
+                                <Input
+                                    type="text"
+                                    label="Address"
+                                    size={screenSize === "sm" ? "sm" : "md"}
+                                    placeholder="Enter http proxy address"
+                                    value={tempSettings.proxyAddress}
+                                    onChange={(e) =>
+                                        setTempSettings({
+                                            ...tempSettings,
+                                            proxyAddress: e.target.value,
+                                        })
+                                    }
+                                    classNames={{
+                                        input: "!text-default-500 focus:!text-foreground transition-colors-opacity",
+                                    }}
+                                />
+                            </>
+                        )}
                     </div>
                 </CardBody>
                 <Divider />
