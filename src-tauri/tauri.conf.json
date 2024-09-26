@@ -9,19 +9,10 @@
         "frontendDist": "../dist"
     },
     "bundle": {
-        "windows": {
-            "wix": {
-                "language": ["en-US", "zh-CN"]
-            },
-            "nsis": {
-                "displayLanguageSelector": true,
-                "installMode": "both",
-                "languages": ["English", "SimpChinese"]
-            }
-        },
         "active": true,
         "targets": "all",
-        "longDescription": "Vultr Firewall Watcher is a desktop application that helps you monitor your Vultr firewall rules.",
+        "longDescription": "Vultr Firewall Watcher is an application that helps you monitor your Vultr firewall rules.",
+        "shortDescription": "Vultr Firewall Watcher",
         "publisher": "Feiyu Zheng",
         "icon": [
             "icons/32x32.png",
@@ -31,8 +22,7 @@
             "icons/icon.ico"
         ],
         "copyright": "Copyright (c) 2024 Feiyu Zheng. All rights reserved.\n\nThis work is licensed under the terms of the MIT license.\nFor a copy, see <https://opensource.org/licenses/MIT>.",
-        "category": "Utility",
-        "shortDescription": "Vultr Firewall Watcher Client"
+        "category": "Utility"
     },
     "app": {
         "windows": [
@@ -44,7 +34,8 @@
                 "resizable": true,
                 "decorations": false,
                 "transparent": true,
-                "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --enable-features=msEdgeFluentOverlayScrollbar,msOverlayScrollbarWinStyle"
+                "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --enable-features=msEdgeFluentOverlayScrollbar,msOverlayScrollbarWinStyle",
+                "center": true
             }
         ],
         "security": {
