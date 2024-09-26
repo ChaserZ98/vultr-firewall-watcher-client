@@ -15,7 +15,8 @@ pub fn run() {
     let mut builder = tauri_app
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_http::init());
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_clipboard_manager::init());
 
     #[cfg(all(desktop))]
     {
