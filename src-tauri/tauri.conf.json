@@ -33,7 +33,6 @@
                 "fullscreen": false,
                 "resizable": true,
                 "decorations": false,
-                "transparent": true,
                 "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --enable-features=msEdgeFluentOverlayScrollbar,msOverlayScrollbarWinStyle",
                 "center": true
             }
