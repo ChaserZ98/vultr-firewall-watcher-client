@@ -10,10 +10,6 @@ export default defineConfig(async () => ({
             "@css": "/src/assets/css",
             "@svg": "/src/assets/svg",
             "@img": "/src/assets/img",
-            "@pages": "/src/pages",
-            "@components": "/src/components",
-            "@hooks": "/src/hooks",
-            "@zustand": "/src/zustand",
         },
     },
 
