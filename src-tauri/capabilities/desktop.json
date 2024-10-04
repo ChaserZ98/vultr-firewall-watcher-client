@@ -1,10 +1,12 @@
 {
-    "$schema": "../gen/schemas/windows-schema.json",
-    "identifier": "default",
-    "description": "default permission",
+    "$schema": "../gen/schemas/desktop-schema.json",
+    "identifier": "desktop",
+    "description": "desktop permission",
     "local": true,
     "windows": ["main"],
+    "platforms": ["windows", "macOS", "linux"],
     "permissions": [
+        "core:default",
         "core:app:default",
         "core:window:default",
         "core:window:allow-start-dragging",
@@ -22,10 +24,16 @@
                 { "url": "https://api.ipify.org" },
                 { "url": "https://api6.ipify.org" },
                 { "url": "https://ipv4.seeip.org" },
-                { "url": "https://ipv6.seeip.org" }
+                { "url": "https://ipv6.seeip.org" },
+                { "url": "https://ipv4.ip.sb" },
+                { "url": "https://ipv6.ip.sb" },
+                { "url": "https://4.ipw.cn" },
+                { "url": "https://6.ipw.cn" }
             ]
         },
         "clipboard-manager:default",
-        "clipboard-manager:allow-write-text"
+        "clipboard-manager:allow-write-text",
+        "os:allow-os-type",
+        "log:default"
     ]
 }

@@ -12,6 +12,8 @@ import {
     RuleState,
 } from "./rules";
 
+import logging from "@/utils/log";
+
 const endpoint = new URL("https://api.vultr.com/v2/firewalls");
 
 type GroupInfo = {
@@ -63,25 +65,33 @@ export type GroupsMeta = {
 };
 
 export type GroupsAction = {
-    refreshGroups: (apiToken: string, fetchClient: typeof fetch) => void;
+    refreshGroups: (
+        apiToken: string,
+        fetchClient: typeof fetch,
+        timeout?: number
+    ) => void;
     deleteGroupById: (
         id: string,
         apiToken: string,
-        fetchClient: typeof fetch
+        fetchClient: typeof fetch,
+        timeout?: number
     ) => void;
 };
 
 function refreshGroups(
     set: StoreApi<FirewallState>["setState"]
 ): GroupsAction["refreshGroups"] {
-    return (apiToken, fetchClient) => {
-        console.log(`Fetching firewall groups.`);
+    return (apiToken, fetchClient, timeout = 5000) => {
+        logging.info(`Fetching firewall groups.`);
         set(() => ({ refreshing: true }));
+
+        const timeoutSignal = AbortSignal.timeout(timeout);
         fetchClient(endpoint, {
             method: "GET",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
             },
+            signal: timeoutSignal,
         })
             .then(async (res) => {
                 return {
@@ -94,7 +104,7 @@ function refreshGroups(
                 if (res.status < 400) {
                     const firewall_groups: GroupInfo[] =
                         res.data.firewall_groups;
-                    console.log(
+                    logging.info(
                         `Successfully fetched ${res.data.meta.total} firewall groups.`
                     );
                     set((state) => {
@@ -121,10 +131,21 @@ function refreshGroups(
                 else throw new Error(`${res.status} ${res.statusText}`);
             })
             .catch((err: Error) => {
-                console.error(
-                    `Failed to fetch firewall groups: ${err.message}`
+                if (timeoutSignal.aborted) {
+                    logging.warn(
+                        `Failed to fetch firewall groups: ${timeoutSignal.reason}`
+                    );
+                } else {
+                    logging.error(`Failed to fetch firewall groups: ${err}`);
+                }
+                toast.error(
+                    `Failed to fetch firewall groups: ${
+                        timeoutSignal.aborted
+                            ? timeoutSignal.reason.message
+                            : err.message
+                    }`
                 );
-                toast.error(`Failed to fetch firewall groups: ${err.message}`);
+
                 set(() => ({ groups: {}, meta: null }));
             })
             .finally(() => set(() => ({ refreshing: false })));
@@ -134,18 +155,20 @@ function refreshGroups(
 function deleteGroupById(
     set: StoreApi<FirewallState>["setState"]
 ): GroupsAction["deleteGroupById"] {
-    return (id, apiToken, fetchClient) => {
-        console.log(`Deleting group with ID ${id}.`);
+    return (id, apiToken, fetchClient, timeout = 5000) => {
+        logging.info(`Deleting group with ID ${id}.`);
         set(
             produce((state: FirewallState) => {
                 state.groups[id].deleting = true;
             })
         );
+        const timeoutSignal = AbortSignal.timeout(timeout);
         fetchClient(new URL(`${endpoint}/${id}`), {
             method: "DELETE",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
             },
+            signal: timeoutSignal,
         })
             .then(async (res) => {
                 if (!res.ok) {
@@ -161,17 +184,26 @@ function deleteGroupById(
                         delete state.groups[id];
                     })
                 );
-                console.log(`Successfully deleted group with ID ${id}`);
+                logging.info(`Successfully deleted group with ID ${id}`);
                 toast.success(`Successfully deleted group with ID ${id}`);
             })
             .catch((err: Error) => {
+                if (timeoutSignal.aborted) {
+                    logging.error(
+                        `Failed to delete group: ${timeoutSignal.reason}`
+                    );
+                    toast.error(
+                        `Failed to delete group: ${timeoutSignal.reason.message}`
+                    );
+                } else {
+                    logging.error(`${err}`);
+                    toast.error(err.message);
+                }
                 set(
                     produce((state: FirewallState) => {
                         state.groups[id].deleting = false;
                     })
                 );
-                console.error(err);
-                toast.error(err.message);
             });
     };
 }

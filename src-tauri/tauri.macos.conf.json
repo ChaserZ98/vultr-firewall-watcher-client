@@ -1,0 +1,20 @@
+{
+    "identifier": "com.chaserz98.vultr-firewall-watcher",
+    "app": {
+        "windows": [
+            {
+                "label": "main",
+                "title": "Vultr Firewall Watcher",
+                "width": 1280,
+                "height": 720,
+                "fullscreen": false,
+                "resizable": true,
+                "decorations": true,
+                "center": true
+            }
+        ],
+        "security": {
+            "capabilities": ["desktop"]
+        }
+    }
+}

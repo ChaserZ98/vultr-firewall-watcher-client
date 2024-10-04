@@ -1,7 +1,7 @@
 {
     "productName": "Vultr Firewall Watcher",
-    "version": "0.1.0",
-    "identifier": "com.vultr-firewall-watcher-client.app",
+    "version": "../package.json",
+    "identifier": "com.chaserz98.vultr-firewall-watcher",
     "build": {
         "beforeDevCommand": "bun run dev --host",
         "devUrl": "http://127.0.0.1:1420",
@@ -27,13 +27,13 @@
     "app": {
         "windows": [
             {
+                "label": "main",
                 "title": "Vultr Firewall Watcher",
                 "width": 1280,
                 "height": 720,
                 "fullscreen": false,
                 "resizable": true,
-                "decorations": false,
-                "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --enable-features=msEdgeFluentOverlayScrollbar,msOverlayScrollbarWinStyle",
+                "decorations": true,
                 "center": true
             }
         ],

@@ -1,6 +1,6 @@
 import { Switch } from "@nextui-org/react";
 
-import { useSettingsStore } from "@zustand/settings";
+import { useSettingsStore } from "@/zustand/settings";
 
 export default function ProxySwitch() {
     const settings = useSettingsStore((state) => state.settings);

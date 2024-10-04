@@ -14,11 +14,12 @@ import {
 } from "@nextui-org/react";
 import { toast } from "react-toastify";
 
-import useClipboard from "@hooks/clipboard";
-import useFetch from "@hooks/fetch";
-import { Environment, useEnvironmentStore } from "@zustand/environment";
-import { Version as IPVersion, useIPStore } from "@zustand/ip";
-import { useSettingsStore } from "@zustand/settings";
+import useFetch from "@/hooks/fetch";
+import clipboard from "@/utils/clipboard";
+import logging from "@/utils/log";
+import { Environment, useEnvironmentStore } from "@/zustand/environment";
+import { Version as IPVersion, useIPStore } from "@/zustand/ip";
+import { useSettingsStore } from "@/zustand/settings";
 import ProxySwitch from "./ProxySwitch";
 
 export default function MyIPTable() {
@@ -39,8 +40,6 @@ export default function MyIPTable() {
             : undefined
     );
 
-    const clipboard = useClipboard();
-
     const refresh = useCallback(
         (version: IPVersion, fetchClient: typeof fetch) => {
             if (settings.useProxy && settings.proxyAddress === "") {
@@ -56,6 +55,24 @@ export default function MyIPTable() {
         },
         [settings]
     );
+    const copy = useCallback((ip: string) => {
+        clipboard
+            .writeText(ip)
+            .then(() =>
+                toast.success("Copied to clipboard", {
+                    autoClose: 1000,
+                    hideProgressBar: true,
+                    pauseOnHover: false,
+                    pauseOnFocusLoss: false,
+                    closeOnClick: false,
+                    closeButton: false,
+                })
+            )
+            .catch((e) => {
+                logging.error(`Failed to copy to clipboard: ${e}`);
+                toast.error("Failed to copy to clipboard");
+            });
+    }, []);
 
     return (
         <div className="flex flex-col px-8 gap-4 items-center select-none">
@@ -120,41 +137,13 @@ export default function MyIPTable() {
                                                 variant="light"
                                                 color="primary"
                                                 className="text-default-400 transition-colors-opacity hover:text-primary-500"
-                                                onClick={() => {
-                                                    clipboard
-                                                        .writeText(
-                                                            version ===
-                                                                IPVersion.V4
-                                                                ? ipv4.value
-                                                                : ipv6.value
-                                                        )
-                                                        .then(() => {
-                                                            toast.success(
-                                                                "Copied to clipboard",
-                                                                {
-                                                                    autoClose: 1000,
-                                                                    hideProgressBar:
-                                                                        true,
-                                                                    pauseOnHover:
-                                                                        false,
-                                                                    pauseOnFocusLoss:
-                                                                        false,
-                                                                    closeOnClick:
-                                                                        false,
-                                                                    closeButton:
-                                                                        false,
-                                                                }
-                                                            );
-                                                        })
-                                                        .catch((e) => {
-                                                            console.error(
-                                                                `Failed to copy to clipboard: ${e}`
-                                                            );
-                                                            toast.error(
-                                                                "Failed to copy to clipboard"
-                                                            );
-                                                        });
-                                                }}
+                                                onClick={() =>
+                                                    copy(
+                                                        version === IPVersion.V4
+                                                            ? ipv4.value
+                                                            : ipv6.value
+                                                    )
+                                                }
                                             >
                                                 <Icon
                                                     path={mdiContentCopy}

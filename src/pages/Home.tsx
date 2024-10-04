@@ -1,4 +1,4 @@
-import GroupTable from "@components/Firewall/Group/GroupTable";
+import GroupTable from "@/components/Firewall/Group/GroupTable";
 
 export default function Home() {
     return (

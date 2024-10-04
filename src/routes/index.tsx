@@ -3,12 +3,12 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { Spinner } from "@nextui-org/react";
 
-const App = lazy(() => import("../App.tsx"));
-const Home = lazy(() => import("@pages/Home.tsx"));
-const Settings = lazy(() => import("@pages/Settings.tsx"));
-const MyIP = lazy(() => import("@pages/MyIP.tsx"));
+const App = lazy(() => import("@/App.tsx"));
+const Home = lazy(() => import("@/pages/Home.tsx"));
+const Settings = lazy(() => import("@/pages/Settings.tsx"));
+const MyIP = lazy(() => import("@/pages/MyIP.tsx"));
 
-const Rules = lazy(() => import("@pages/Rules.tsx"));
+const Rules = lazy(() => import("@/pages/Rules.tsx"));
 
 const Loading = ({ children }: { children: React.ReactNode }) => (
     <Suspense

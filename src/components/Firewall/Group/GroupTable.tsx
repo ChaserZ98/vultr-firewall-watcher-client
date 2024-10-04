@@ -21,11 +21,12 @@ import {
 } from "@nextui-org/react";
 import { toast } from "react-toastify";
 
+import ProxySwitch from "@/components/ProxySwitch";
 import useFetch from "@/hooks/fetch";
-import ProxySwitch from "@components/ProxySwitch";
-import { Environment, useEnvironmentStore } from "@zustand/environment";
-import { useFirewallStore } from "@zustand/firewall/firewall";
-import { Settings, useSettingsStore } from "@zustand/settings";
+import logging from "@/utils/log";
+import { Environment, useEnvironmentStore } from "@/zustand/environment";
+import { useFirewallStore } from "@/zustand/firewall/firewall";
+import { Settings, useSettingsStore } from "@/zustand/settings";
 
 export default function GroupTable() {
     const environment = useEnvironmentStore((state) => state.environment);
@@ -202,7 +203,7 @@ export default function GroupTable() {
                                     color="primary"
                                     onClick={() => {
                                         if (!selectedGroupId.current) {
-                                            console.error(
+                                            logging.warn(
                                                 `Delete group operation failed: Group ID is null`
                                             );
                                             toast.error(

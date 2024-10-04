@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import logging from "@/utils/log";
+
 export type Settings = {
     proxyAddress: string;
     useProxy: boolean;
@@ -24,7 +26,7 @@ export function isSettings(settings: any): settings is Settings {
 
 function createInitialSettings(): Settings {
     try {
-        const settings = JSON.parse(localStorage.getItem("settings") || "");
+        const settings = JSON.parse(localStorage.getItem("settings") || "{}");
         return isSettings(settings)
             ? settings
             : {
@@ -33,7 +35,7 @@ function createInitialSettings(): Settings {
                   apiToken: "",
               };
     } catch (e) {
-        console.error(`Error parsing settings: ${e}`);
+        logging.error(`Error parsing settings: ${e}`);
         return {
             proxyAddress: "",
             useProxy: false,

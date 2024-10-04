@@ -2,8 +2,8 @@ import { useState } from "react";
 
 import { Pagination } from "@nextui-org/react";
 
-import { NewRuleState, RuleState } from "@zustand/firewall/rules";
-import { Version as IPVersion } from "@zustand/ip";
+import { NewRuleState, RuleState } from "@/zustand/firewall/rules";
+import { Version as IPVersion } from "@/zustand/ip";
 import NewRule from "./NewRule";
 import Rule from "./Rule";
 

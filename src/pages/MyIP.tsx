@@ -1,4 +1,4 @@
-import MyIPTable from "@components/MyIPTable";
+import MyIPTable from "@/components/MyIPTable";
 
 export default function MyIP() {
     return (

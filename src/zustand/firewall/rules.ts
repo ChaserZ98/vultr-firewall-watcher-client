@@ -2,6 +2,7 @@ import { produce } from "immer";
 import { toast } from "react-toastify";
 import { StoreApi } from "zustand";
 
+import logging from "@/utils/log";
 import { Version as IPVersion } from "../ip";
 import { type FirewallState } from "./firewall";
 
@@ -90,19 +91,22 @@ export type RulesAction = {
     refreshRules: (
         id: string,
         apiToken: string,
-        fetchClient: typeof fetch
+        fetchClient: typeof fetch,
+        timeout?: number
     ) => void;
     deleteRuleById: (
         group_id: string,
         rule_id: number,
         apiToken: string,
-        fetchClient: typeof fetch
+        fetchClient: typeof fetch,
+        timeout?: number
     ) => Promise<void>;
     createRule: (
         groupId: string,
         newRule: CreateRule,
         apiToken: string,
-        fetchClient: typeof fetch
+        fetchClient: typeof fetch,
+        timeout?: number
     ) => void;
 };
 
@@ -207,18 +211,20 @@ function setNewRule(
 function refreshRules(
     set: StoreApi<FirewallState>["setState"]
 ): RulesAction["refreshRules"] {
-    return (id, apiToken, fetchClient) => {
-        console.log(`Fetching rules for group ${id}.`);
+    return (id, apiToken, fetchClient, timeout = 5000) => {
+        logging.info(`Fetching rules for group ${id}.`);
         set(
             produce((state: FirewallState) => {
                 state.groups[id].refreshing = true;
             })
         );
+        const timeoutSignal = AbortSignal.timeout(timeout);
         fetchClient(endpoint(id), {
             method: "GET",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
             },
+            signal: timeoutSignal,
         })
             .then(async (res) => {
                 return {
@@ -234,7 +240,7 @@ function refreshRules(
                         meta,
                     }: { firewall_rules: RuleInfo[]; meta: RulesMeta } =
                         res.data;
-                    console.log(
+                    logging.info(
                         `Successfully fetched ${meta.total} rules for group ${id}.`
                     );
                     set(
@@ -261,9 +267,17 @@ function refreshRules(
                 else throw new Error(`${res.status} ${res.statusText}`);
             })
             .catch((err: Error) => {
-                console.error(`Failed to fetch firewall rules: ${err.message}`);
+                logging.error(
+                    `Failed to fetch firewall rules for group ${id}: ${
+                        timeoutSignal.aborted ? timeoutSignal.reason : err
+                    }`
+                );
                 toast.error(
-                    `Failed to fetch firewall rules for group ${id}: ${err.message}`
+                    `Failed to fetch firewall rules for group ${id}: ${
+                        timeoutSignal.aborted
+                            ? timeoutSignal.reason.message
+                            : err.message
+                    }`
                 );
                 set(
                     produce((state: FirewallState) => {
@@ -285,18 +299,22 @@ function refreshRules(
 function deleteRuleById(
     set: StoreApi<FirewallState>["setState"]
 ): RulesAction["deleteRuleById"] {
-    return async (groupId, ruleId, apiToken, fetchClient) => {
-        console.log(`Deleting the rule ${ruleId} in group ${groupId}.`);
+    return async (groupId, ruleId, apiToken, fetchClient, timeout = 5000) => {
+        logging.info(`Deleting the rule ${ruleId} in group ${groupId}.`);
         set(
             produce((state: FirewallState) => {
                 state.groups[groupId].rules[ruleId].deleting = true;
             })
         );
+
+        const timeoutSignal = AbortSignal.timeout(timeout);
+
         await fetchClient(endpoint(groupId, ruleId), {
             method: "DELETE",
             headers: {
                 Authorization: `Bearer ${apiToken}`,
             },
+            signal: timeoutSignal,
         })
             .then(async (res) => {
                 if (!res.ok) {
@@ -312,21 +330,29 @@ function deleteRuleById(
                         delete state.groups[groupId].rules[ruleId];
                     })
                 );
-                console.log(
+                logging.info(
                     `Successfully deleted the rule ${ruleId} in group ${groupId}.`
                 );
                 toast.success(`Successfully deleted the rule.`);
             })
             .catch((err: Error) => {
+                logging.error(
+                    `Failed to delete firewall rule ${ruleId} in group ${groupId}: ${
+                        timeoutSignal.aborted ? timeoutSignal.reason : err
+                    }`
+                );
+                toast.error(
+                    `Failed to delete the firewall rule: ${
+                        timeoutSignal.aborted
+                            ? timeoutSignal.reason.message
+                            : err.message
+                    }`
+                );
                 set(
                     produce((state: FirewallState) => {
                         state.groups[groupId].rules[ruleId].deleting = false;
                     })
                 );
-                console.error(
-                    `Failed to delete firewall rule ${ruleId} in group ${groupId}: ${err.message}`
-                );
-                toast.error(`Failed to delete the rule: ${err.message}`);
             });
     };
 }
@@ -334,8 +360,8 @@ function deleteRuleById(
 function createRule(
     set: StoreApi<FirewallState>["setState"]
 ): RulesAction["createRule"] {
-    return (groupId, newRule, apiToken, fetchClient) => {
-        console.log(
+    return (groupId, newRule, apiToken, fetchClient, timeout = 5000) => {
+        logging.info(
             `Creating a new rule ${JSON.stringify(
                 newRule
             )} in group ${groupId}.`
@@ -345,6 +371,8 @@ function createRule(
                 state.groups[groupId].newRule[newRule.ip_type].creating = true;
             })
         );
+
+        const timeoutSignal = AbortSignal.timeout(timeout);
         fetchClient(endpoint(groupId), {
             method: "POST",
             headers: {
@@ -352,6 +380,7 @@ function createRule(
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(newRule),
+            signal: timeoutSignal,
         })
             .then(async (res) => {
                 const data = await res.json();
@@ -362,7 +391,7 @@ function createRule(
                         }`
                     );
                 }
-                console.log(
+                logging.info(
                     `Successfully created the rule ${JSON.stringify(
                         data
                     )} in group ${groupId}.`
@@ -384,6 +413,20 @@ function createRule(
                 );
             })
             .catch((err: Error) => {
+                logging.error(
+                    `Failed to create the rule ${JSON.stringify(
+                        newRule
+                    )} in group ${groupId}: ${
+                        timeoutSignal.aborted ? timeoutSignal.reason : err
+                    }`
+                );
+                toast.error(
+                    `Failed to create the rule: ${
+                        timeoutSignal.aborted
+                            ? timeoutSignal.reason.message
+                            : err.message
+                    }`
+                );
                 set(
                     produce((state: FirewallState) => {
                         state.groups[groupId].newRule[
@@ -391,12 +434,6 @@ function createRule(
                         ].creating = false;
                     })
                 );
-                console.error(
-                    `Failed to create the rule ${JSON.stringify(
-                        newRule
-                    )} in group ${groupId}: ${err.message}`
-                );
-                toast.error(`Failed to create the rule: ${err.message}`);
             });
     };
 }

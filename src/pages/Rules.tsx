@@ -16,21 +16,23 @@ import {
 } from "@nextui-org/react";
 import { toast } from "react-toastify";
 
-import RulesTable from "@components/Firewall/Rules/RulesTable";
-import ProxySwitch from "@components/ProxySwitch";
-import useFetch from "@hooks/fetch";
-import { Environment, useEnvironmentStore } from "@zustand/environment";
-import { useFirewallStore } from "@zustand/firewall/firewall";
-import { initialGroupState } from "@zustand/firewall/groups";
+import RulesTable from "@/components/Firewall/Rules/RulesTable";
+import ProxySwitch from "@/components/ProxySwitch";
+import useFetch from "@/hooks/fetch";
+import { Environment, useEnvironmentStore } from "@/zustand/environment";
+import { useFirewallStore } from "@/zustand/firewall/firewall";
+import { initialGroupState } from "@/zustand/firewall/groups";
 import {
     NewRuleState,
     newRuleStateToCreateRule,
     portToProtocol,
     RuleState,
-} from "@zustand/firewall/rules";
-import { Version as IPVersion } from "@zustand/ip";
-import { Screen, useScreenStore } from "@zustand/screen";
-import { Settings, useSettingsStore } from "@zustand/settings";
+} from "@/zustand/firewall/rules";
+import { Version as IPVersion } from "@/zustand/ip";
+import { Screen, useScreenStore } from "@/zustand/screen";
+import { Settings, useSettingsStore } from "@/zustand/settings";
+
+import logging from "@/utils/log";
 
 function getRelativeTimeString(date: string) {
     const now = new Date();
@@ -127,12 +129,8 @@ export default function Rules() {
     }, []);
 
     useEffect(() => {
-        console.log(screenSize);
-    }, [screenSize]);
-
-    useEffect(() => {
         if (!group.id) {
-            console.error(`Group with ID ${id} not found`);
+            logging.warn(`Group with ID ${id} not found`);
             toast.error(`Group with ID ${id} not found`);
             navigate("/");
             return;
@@ -352,7 +350,7 @@ export default function Rules() {
                                         }
                                         onClick={() => {
                                             if (!selectedRule.current) {
-                                                console.error(
+                                                logging.warn(
                                                     `Delete rule operation failed: Rule ID is null`
                                                 );
                                                 toast.error(

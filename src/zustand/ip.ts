@@ -1,8 +1,20 @@
 import { toast } from "react-toastify";
 import { create, StoreApi } from "zustand";
 
-const IPv4Endpoints = ["https://api.ipify.org", "https://ipv4.seeip.org"];
-const IPv6Endpoints = ["https://api6.ipify.org", "https://ipv6.seeip.org"];
+import logging from "@/utils/log";
+
+const IPv4Endpoints = [
+    "https://api.ipify.org",
+    "https://ipv4.seeip.org",
+    "https://ipv4.ip.sb",
+    "https://4.ipw.cn",
+];
+const IPv6Endpoints = [
+    "https://api6.ipify.org",
+    "https://ipv6.seeip.org",
+    "https://ipv6.ip.sb",
+    "https://6.ipw.cn",
+];
 
 export enum Version {
     V4 = "v4",
@@ -20,11 +32,15 @@ type State = {
 };
 
 type Action = {
-    refresh: (ipVersion: Version, fetchClient: typeof fetch) => void;
+    refresh: (
+        ipVersion: Version,
+        fetchClient: typeof fetch,
+        timeout?: number
+    ) => void;
 };
 
 function refresh(set: StoreApi<State>["setState"]): Action["refresh"] {
-    return (ipVersion, fetchClient) => {
+    return (ipVersion, fetchClient, timeout = 5000) => {
         const endpoints =
             ipVersion === Version.V4 ? IPv4Endpoints : IPv6Endpoints;
         set(() => ({
@@ -34,65 +50,71 @@ function refresh(set: StoreApi<State>["setState"]): Action["refresh"] {
             },
         }));
 
-        const controller = new AbortController();
+        const exclusiveAbortController = new AbortController();
 
-        const tasks: Promise<{ endpoint: string; data: string | null }>[] =
-            endpoints.map((endpoint) => {
-                console.log(`Fetching ${ipVersion} address from ${endpoint}.`);
+        const tasks = endpoints.map((endpoint) => {
+            logging.info(`Fetching ${ipVersion} address from ${endpoint}.`);
+            const timeoutSignal = AbortSignal.timeout(timeout);
+            const mergedSignal = AbortSignal.any([
+                exclusiveAbortController.signal,
+                timeoutSignal,
+            ]);
 
-                return fetchClient(endpoint, {
-                    signal: controller.signal,
+            return fetchClient(endpoint, { signal: mergedSignal })
+                .then((response) => {
+                    if (response.ok) return response.text();
+                    throw new Error(`Failed to fetch ${ipVersion} address.`);
                 })
-                    .then((response) => {
-                        if (response.ok) return response.text();
-                        throw new Error(
-                            `Failed to fetch ${ipVersion} address.`
-                        );
-                    })
-                    .then((res) => {
-                        set(() => ({
-                            [ipVersion]: {
-                                value: res,
-                                refreshing: false,
-                            },
-                        }));
-                        controller.abort();
-                        return { endpoint, data: res };
-                    })
-                    .catch((err) => {
-                        console.error(`${endpoint} failed: ${err}`);
-                        return { endpoint, data: null };
-                    });
-            });
-
-        Promise.allSettled(tasks).then((results) => {
-            for (const res of results) {
-                if (res.status === "rejected") {
-                    console.error(res.reason);
-                    continue;
-                }
-                const value = res.value;
-                if (value.data) {
-                    set(() => ({
-                        [ipVersion]: {
-                            value: value.data,
-                            refreshing: false,
-                        },
-                    }));
-                    console.log(
-                        `Fetched ${ipVersion} address ${value.data} from ${value.endpoint}`
+                .then((ip) => {
+                    exclusiveAbortController.abort(
+                        "Request aborted due to other successful request"
                     );
-                    return;
-                }
-            }
-            set(() => ({
-                [ipVersion]: {
-                    value: "",
-                    refreshing: false,
-                },
-            }));
-            toast.error(`Failed to fetch ${ipVersion} address.`);
+                    return { ip, endpoint };
+                })
+                .catch((error) => {
+                    if (timeoutSignal.aborted) {
+                        logging.info(
+                            `${endpoint} aborted: ${timeoutSignal.reason}`
+                        );
+                    } else if (exclusiveAbortController.signal.aborted) {
+                        logging.info(
+                            `${endpoint} aborted: ${exclusiveAbortController.signal.reason}`
+                        );
+                    } else {
+                        logging.warn(`${endpoint} failed: ${error}`);
+                    }
+                    throw error;
+                });
         });
+
+        Promise.any(tasks)
+            .then((res) => {
+                set(() => ({
+                    [ipVersion]: {
+                        value: res.ip,
+                        refreshing: false,
+                    },
+                }));
+                logging.info(
+                    `Fetched ${ipVersion} address ${res.ip} from ${res.endpoint}`
+                );
+            })
+            .catch((err) => {
+                set(() => ({
+                    [ipVersion]: {
+                        value: "",
+                        refreshing: false,
+                    },
+                }));
+                logging.error(
+                    `Failed to fetch ${ipVersion} address: ${
+                        err.name === "AggregateError"
+                            ? "All requests failed"
+                            : err
+                    }`
+                );
+                toast.error(`Failed to fetch ${ipVersion} address.`);
+            });
     };
 }
 

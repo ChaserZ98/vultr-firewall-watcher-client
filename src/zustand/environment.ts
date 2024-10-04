@@ -1,8 +1,12 @@
+import { type } from "@tauri-apps/plugin-os";
 import { create } from "zustand";
 
 export enum Environment {
-    MOBILE = "mobile",
-    DESKTOP = "desktop",
+    LINUX = "linux",
+    MACOS = "macos",
+    WINDOWS = "windows",
+    IOS = "ios",
+    ANDROID = "android",
     WEB = "web",
 }
 type EnvironmentState = {
@@ -12,7 +16,5 @@ type EnvironmentState = {
 export const useEnvironmentStore = create<EnvironmentState>()(() => ({
     environment: !("__TAURI_INTERNALS__" in window)
         ? Environment.WEB
-        : navigator.maxTouchPoints > 0
-        ? Environment.MOBILE
-        : Environment.DESKTOP,
+        : (type() as Environment),
 }));

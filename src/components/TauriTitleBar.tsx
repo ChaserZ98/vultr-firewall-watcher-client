@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
     mdiWindowClose,
@@ -8,41 +8,53 @@ import {
 } from "@mdi/js";
 import Icon from "@mdi/react";
 import { Image } from "@nextui-org/react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Window, getCurrentWindow } from "@tauri-apps/api/window";
 
-import tauriNotify from "@hooks/notification";
+import tauriNotify from "@/hooks/notification";
+import logging from "@/utils/log";
+import { Environment, useEnvironmentStore } from "@/zustand/environment";
+
 import appIcon from "@img/app-icon.png";
-import { Environment, useEnvironmentStore } from "@zustand/environment";
+
+const mainWindowLabel = "main";
 
 export default function TauriTitleBar() {
     const environment = useEnvironmentStore((state) => state.environment);
-    if (environment !== Environment.DESKTOP) return <></>;
+
+    const mainWindowRef = useRef<Window | null>(null);
+    const unlistenCloseRef = useRef(() => {});
+    const unlistenResizeRef = useRef<Partial<Record<string, () => void>>>({});
+    const isFirstClosed = useRef(true);
 
     const [isMaximized, setIsMaximized] = useState(false);
-    const [isFirstClosed, setIsFirstClosed] = useState(true);
 
-    const updateMaximizeStatus = useCallback(async () => {
-        setIsMaximized(await getCurrentWindow().isMaximized());
-    }, []);
     const onWindowDrag = useCallback(
-        async (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
             if (e.buttons !== 1) return;
 
             e.preventDefault();
+            const currentWindow = getCurrentWindow();
             if (e.detail === 2) {
-                await getCurrentWindow().toggleMaximize();
-                setIsMaximized(await getCurrentWindow().isMaximized());
+                currentWindow
+                    .toggleMaximize()
+                    .then(() => getCurrentWindow().isMaximized())
+                    .then((maximize) => setIsMaximized(maximize))
+                    .catch((err) => logging.error(`${err}`));
             } else {
-                await getCurrentWindow().startDragging();
+                currentWindow
+                    .startDragging()
+                    .catch((err) => logging.error(`${err}$`));
             }
         },
         []
     );
     const onWindowMinimize = useCallback(
-        async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
             e.preventDefault();
             e.stopPropagation();
-            await getCurrentWindow().minimize();
+            getCurrentWindow()
+                .minimize()
+                .catch((err) => logging.error(`${err}`));
         },
         []
     );
@@ -50,61 +62,111 @@ export default function TauriTitleBar() {
         async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
             e.preventDefault();
             e.stopPropagation();
-            await getCurrentWindow().toggleMaximize();
-            setIsMaximized(await getCurrentWindow().isMaximized());
+
+            const currentWindow = getCurrentWindow();
+            currentWindow
+                .toggleMaximize()
+                .then(() => currentWindow.isMaximized())
+                .then((maximize) => setIsMaximized(maximize))
+                .catch((err) => logging.error(`${err}`));
         },
         []
     );
     const onWindowClose = useCallback(
-        async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
             e.preventDefault();
             e.stopPropagation();
 
-            await getCurrentWindow().hide();
-
-            if (isFirstClosed) {
-                await tauriNotify(
-                    "The application is still running in the background."
-                );
-                setIsFirstClosed(false);
+            const window = getCurrentWindow();
+            if (window.label === mainWindowLabel) {
+                window
+                    .hide()
+                    .then(() => {
+                        if (!isFirstClosed.current) return null;
+                        return tauriNotify(
+                            "The application is still running in the background."
+                        );
+                    })
+                    .then((task) => {
+                        if (!task) return;
+                        isFirstClosed.current = false;
+                    });
+            } else {
+                window.close().catch((err) => logging.error(`${err}`));
             }
         },
-        [isFirstClosed]
+        []
     );
 
     useEffect(() => {
-        console.log(
-            `Current platform: ${environment}\nCurrent mode: ${
-                import.meta.env.MODE
-            }`
-        );
+        const currentMode = import.meta.env.MODE;
+        const isModeDev = currentMode === "development";
 
-        updateMaximizeStatus();
-        let unlistenResize = () => {};
-        const listenResize = async () => {
-            unlistenResize = await getCurrentWindow().onResized(() => {
-                updateMaximizeStatus();
+        logging.info(`Current Platform: ${environment}`);
+        logging.info(`Current Mode: ${currentMode}`);
+
+        Window.getByLabel(mainWindowLabel).then((window) => {
+            mainWindowRef.current = window;
+            window
+                ?.onCloseRequested(async (event) => {
+                    event.preventDefault();
+                    await window.hide();
+                    if (isFirstClosed.current) {
+                        await tauriNotify(
+                            "The application is still running in the background."
+                        );
+                        isFirstClosed.current = false;
+                    }
+                })
+                .then((unlisten) => {
+                    unlistenCloseRef.current = unlisten;
+                });
+        });
+
+        const currentWindow = getCurrentWindow();
+
+        currentWindow
+            .isMaximized()
+            .then((isMaximized) => setIsMaximized(isMaximized));
+        currentWindow
+            .onResized(async () => {
+                setIsMaximized(await currentWindow.isMaximizable());
+            })
+            .then((unlisten) => {
+                unlistenResizeRef.current[currentWindow.label] = unlisten;
             });
-        };
-        listenResize();
-        const preventContextMenu = (e: MouseEvent) => e.preventDefault();
 
-        const preventRefreshKey = import.meta.env.PROD
-            ? (e: KeyboardEvent) => {
+        const preventContextMenu = isModeDev
+            ? () => {}
+            : (e: MouseEvent) => e.preventDefault();
+
+        const preventRefreshKey = isModeDev
+            ? () => {}
+            : (e: KeyboardEvent) => {
                   if (e.key === "F5" || (e.key === "r" && e.ctrlKey))
                       e.preventDefault();
-              }
-            : () => {};
+              };
 
         document.addEventListener("contextmenu", preventContextMenu);
         document.addEventListener("keydown", preventRefreshKey);
 
         return () => {
-            unlistenResize();
+            unlistenCloseRef.current();
+            const unlistenResize =
+                unlistenResizeRef.current[currentWindow.label];
+            if (unlistenResize) {
+                unlistenResize();
+                delete unlistenResizeRef.current[currentWindow.label];
+            }
+
             document.removeEventListener("contextmenu", preventContextMenu);
             document.removeEventListener("keydown", preventRefreshKey);
         };
     }, []);
+
+    if (environment !== Environment.WINDOWS) {
+        return <></>;
+    }
 
     return (
         <div

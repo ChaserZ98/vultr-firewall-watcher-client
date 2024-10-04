@@ -15,8 +15,8 @@ import {
     Protocol,
     ProtocolSelection,
     SourceType,
-} from "@zustand/firewall/rules";
-import { Version as IPVersion, useIPStore } from "@zustand/ip";
+} from "@/zustand/firewall/rules";
+import { Version as IPVersion, useIPStore } from "@/zustand/ip";
 
 const protocols = [
     {
@@ -210,7 +210,6 @@ export default function NewRule(props: NewRuleProps) {
                             protocol === Protocol.UDP
                                 ? props.newRule.port
                                 : "");
-                        console.log(port);
                         props.onRuleChange({
                             ...props.newRule,
                             port,

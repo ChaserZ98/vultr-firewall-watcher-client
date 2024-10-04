@@ -5,9 +5,9 @@ import { ToastContainer } from "react-toastify";
 
 import "react-toastify/dist/ReactToastify.css";
 
-import Navbar from "@components/Navbar";
-import TauriTitleBar from "@components/TauriTitleBar";
-import { useScreenStore } from "@zustand/screen";
+import Navbar from "@/components/Navbar";
+import TauriTitleBar from "@/components/TauriTitleBar";
+import { useScreenStore } from "@/zustand/screen";
 
 export default function App() {
     const addScreenSizeListener = useScreenStore(

@@ -3,8 +3,6 @@ import {
     fetch as tauriFetch,
 } from "@tauri-apps/plugin-http";
 
-import { Environment, useEnvironmentStore } from "@zustand/environment";
-
 function createTauriFetch(clientOptions?: ClientOptions) {
     return (input: RequestInfo | URL, init?: RequestInit) => {
         return tauriFetch(input, {
@@ -15,9 +13,7 @@ function createTauriFetch(clientOptions?: ClientOptions) {
 }
 
 export default function useFetch(clientOptions?: ClientOptions) {
-    const environment = useEnvironmentStore((state) => state.environment);
-
-    return environment === Environment.WEB
-        ? fetch
-        : createTauriFetch(clientOptions);
+    return "__TAURI_INTERNALS__" in window
+        ? createTauriFetch(clientOptions)
+        : fetch;
 }

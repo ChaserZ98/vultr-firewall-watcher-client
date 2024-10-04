@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { mdiCog, mdiThemeLightDark } from "@mdi/js";
@@ -15,9 +15,9 @@ import {
     Tooltip,
 } from "@nextui-org/react";
 
-import { Environment, useEnvironmentStore } from "@zustand/environment";
-import { Screen, useScreenStore } from "@zustand/screen";
-import { useThemeStore } from "@zustand/theme";
+import { Environment, useEnvironmentStore } from "@/zustand/environment";
+import { Screen, useScreenStore } from "@/zustand/screen";
+import { useThemeStore } from "@/zustand/theme";
 
 export default function Navigation() {
     const location = useLocation();
@@ -27,10 +27,6 @@ export default function Navigation() {
     const screenSize = useScreenStore((state) => state.size);
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    useEffect(() => {
-        console.log(screenSize);
-    }, [screenSize]);
 
     return (
         <Navbar
@@ -102,7 +98,7 @@ export default function Navigation() {
                             onClick={() => toggleTheme()}
                             className="p-0.5 min-w-8 w-8 h-8 sm:p-1 sm:min-w-10 sm:w-10 sm:h-10 text-default-foreground"
                         >
-                            <Icon path={mdiThemeLightDark} />
+                            <Icon path={mdiThemeLightDark} className="w-full" />
                         </Button>
                     </Tooltip>
                 </NavbarItem>
@@ -126,18 +122,19 @@ export default function Navigation() {
                         >
                             <Icon
                                 path={mdiCog}
-                                className="animate-[spin_3s_linear_infinite] hover:[animation-play-state:running] [animation-play-state:paused] group-data-[active=true]/settings:[animation-play-state:running]"
+                                className="w-full animate-[spin_3s_linear_infinite] hover:[animation-play-state:running] [animation-play-state:paused] group-data-[active=true]/settings:[animation-play-state:running]"
                             />
                         </Button>
                     </Tooltip>
                 </NavbarItem>
             </NavbarContent>
             <NavbarMenu
+                id="navbar-menu"
                 className="transition-colors-opacity"
                 style={
                     {
                         "--navbar-height":
-                            environment === Environment.DESKTOP
+                            environment === Environment.WINDOWS
                                 ? "6rem"
                                 : "4rem",
                     } as React.CSSProperties

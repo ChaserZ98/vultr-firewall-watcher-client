@@ -10,9 +10,9 @@ import {
     Input,
 } from "@nextui-org/react";
 
-import { Environment, useEnvironmentStore } from "@zustand/environment";
-import { useScreenStore } from "@zustand/screen";
-import { useSettingsStore, type Settings } from "@zustand/settings";
+import { Environment, useEnvironmentStore } from "@/zustand/environment";
+import { useScreenStore } from "@/zustand/screen";
+import { useSettingsStore, type Settings } from "@/zustand/settings";
 
 export default function Settings() {
     const environment = useEnvironmentStore((state) => state.environment);
