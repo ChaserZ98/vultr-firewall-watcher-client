@@ -59,7 +59,7 @@ export default function TauriTitleBar() {
         []
     );
     const onWindowMaximize = useCallback(
-        async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
             e.preventDefault();
             e.stopPropagation();
 
@@ -130,7 +130,7 @@ export default function TauriTitleBar() {
             .then((isMaximized) => setIsMaximized(isMaximized));
         currentWindow
             .onResized(async () => {
-                setIsMaximized(await currentWindow.isMaximizable());
+                setIsMaximized(await currentWindow.isMaximized());
             })
             .then((unlisten) => {
                 unlistenResizeRef.current[currentWindow.label] = unlisten;
