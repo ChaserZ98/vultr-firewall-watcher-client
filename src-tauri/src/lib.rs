@@ -1,5 +1,3 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#[cfg(desktop)]
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 use tauri::Builder;
 
