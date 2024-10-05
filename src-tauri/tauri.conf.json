@@ -1,17 +1,18 @@
 {
     "productName": "Vultr Firewall Watcher",
-    "version": "0.1.0",
-    "identifier": "com.vultr-firewall-watcher-client.app",
+    "version": "../package.json",
+    "identifier": "com.chaserz98.vultr-firewall-watcher",
     "build": {
-        "beforeDevCommand": "bun run dev",
-        "devUrl": "http://localhost:1420",
+        "beforeDevCommand": "bun run dev --host",
+        "devUrl": "http://127.0.0.1:1420",
         "beforeBuildCommand": "bun run build",
         "frontendDist": "../dist"
     },
     "bundle": {
         "active": true,
         "targets": "all",
-        "longDescription": "Vultr Firewall Watcher is a desktop application that helps you monitor your Vultr firewall rules.",
+        "longDescription": "Vultr Firewall Watcher is an application that helps you monitor your Vultr firewall rules.",
+        "shortDescription": "Vultr Firewall Watcher",
         "publisher": "Feiyu Zheng",
         "icon": [
             "icons/32x32.png",
@@ -21,20 +22,19 @@
             "icons/icon.ico"
         ],
         "copyright": "Copyright (c) 2024 Feiyu Zheng. All rights reserved.\n\nThis work is licensed under the terms of the MIT license.\nFor a copy, see <https://opensource.org/licenses/MIT>.",
-        "category": "Utility",
-        "shortDescription": "Vultr Firewall Watcher Client"
+        "category": "Utility"
     },
     "app": {
         "windows": [
             {
+                "label": "main",
                 "title": "Vultr Firewall Watcher",
                 "width": 1280,
                 "height": 720,
                 "fullscreen": false,
                 "resizable": true,
-                "decorations": false,
-                "transparent": true,
-                "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --enable-features=msEdgeFluentOverlayScrollbar,msOverlayScrollbarWinStyle"
+                "decorations": true,
+                "center": true
             }
         ],
         "security": {

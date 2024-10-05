@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "ES2020",
         "useDefineForClassFields": true,
-        "lib": ["ES2020", "DOM", "DOM.Iterable"],
+        "lib": ["ES2021", "DOM", "DOM.Iterable"],
         "module": "ESNext",
         "skipLibCheck": true,
 
@@ -11,9 +11,7 @@
             "@/*": ["./src/*"],
             "@css/*": ["./src/assets/css/*"],
             "@svg/*": ["./src/assets/svg/*"],
-            "@pages/*": ["./src/pages/*"],
-            "@components/*": ["./src/components/*"],
-            "@hooks/*": ["./src/hooks/*"]
+            "@img/*": ["./src/assets/img/*"],
         },
 
         /* Bundler mode */

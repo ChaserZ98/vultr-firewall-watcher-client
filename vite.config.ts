@@ -9,9 +9,7 @@ export default defineConfig(async () => ({
             "@": "/src",
             "@css": "/src/assets/css",
             "@svg": "/src/assets/svg",
-            "@pages": "/src/pages",
-            "@components": "/src/components",
-            "@hooks": "/src/hooks",
+            "@img": "/src/assets/img",
         },
     },
 

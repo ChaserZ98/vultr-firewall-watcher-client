@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Vultr Firewall Watcher</string>
+    <string name="main_activity_title">Vultr Firewall Watcher</string>
+</resources>
