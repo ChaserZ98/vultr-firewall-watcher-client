@@ -1,9 +1,9 @@
 name: Release Draft
+run-name: "Release Attempt: ${{github.event.pull_request.title}}"
 on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   create-release:
@@ -12,7 +12,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     outputs:
-      release_id: ${{ steps.create-release.outputs.result }}
+      release_id: ${{ fromJson(steps.create-release.outputs.result).id }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup node
@@ -23,7 +23,7 @@ jobs:
         run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
       - name: Create release draft
         id: create-release
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const { data } = await github.rest.repos.createRelease({
@@ -35,7 +35,12 @@ jobs:
               draft: true,
               prerelease: false
             })
-            return data.id
+            return { id: data.id, html_url: data.html_url }
+      - name: Release url
+        env:
+          RELEASE_URL: ${{fromJson(steps.create-release.outputs.result).html_url}}
+        run: |
+          echo "Release url: $RELEASE_URL"
   build-release:
     needs: create-release
     permissions:
@@ -77,6 +82,7 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
       - name: Build Tauri app and upload assets to release
+        id: tauri-build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -84,3 +90,15 @@ jobs:
           tauriScript: bun run tauri
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
+      - name: Actifact list
+        env:
+          RELEASE_ACTIFACTS: ${{steps.tauri-build.outputs.artifactPaths}}
+        run: |
+          for actifact in $RELEASE_ACTIFACTS; do
+            echo "Actifact: $actifact"
+          done
+      - name: Release url
+        env:
+          RELEASE_URL: ${{steps.tauri-build.outputs.releaseHtmlUrl}}
+        run: |
+          echo "Release url: $RELEASE_URL"

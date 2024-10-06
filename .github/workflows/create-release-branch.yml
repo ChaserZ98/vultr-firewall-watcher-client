@@ -1,9 +1,6 @@
 name: Create Release Branch
-run-name: "${{github.actor}} trying to create a ${{github.event.inputs.semverType}} release"
+run-name: "${{github.actor}} is trying to create a ${{github.event.inputs.semverType}} release"
 on:
-  push:
-    branches:
-      - CI
   workflow_dispatch:
     inputs:
       semverType:
