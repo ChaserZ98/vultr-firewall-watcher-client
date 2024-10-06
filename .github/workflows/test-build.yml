@@ -58,7 +58,10 @@ jobs:
       - name: Actifact list
         env:
           RELEASE_ACTIFACTS: ${{steps.tauri-build.outputs.artifactPaths}}
-        run: |
-          for actifact in $RELEASE_ACTIFACTS; do
-            echo "Actifact: $actifact"
-          done
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactArray = JSON.parse(process.env.RELEASE_ACTIFACTS);
+            for (const artifact of artifactArray) {
+              console.log(`Artifact: ${artifact}`);
+            }
