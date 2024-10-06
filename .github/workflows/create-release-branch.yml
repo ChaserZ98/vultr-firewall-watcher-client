@@ -1,4 +1,5 @@
 name: Create Release Branch
+run-name: "${{github.actor}} is trying to create a ${{github.event.inputs.semverType}} release"
 on:
   workflow_dispatch:
     inputs:

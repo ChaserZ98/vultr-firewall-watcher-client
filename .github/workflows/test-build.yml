@@ -1,4 +1,5 @@
 name: Test Build
+run-name: "Test Build: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || github.event_name }}"
 on:
   pull_request:
     branches:
@@ -7,6 +8,7 @@ on:
 
 jobs:
   build:
+    if: ${{ !startsWith(github.head_ref, 'release/')}}
     permissions:
       contents: write
     strategy:
@@ -46,9 +48,17 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
       - name: Build Tauri app
+        id: tauri-build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         with:
           tauriScript: bun run tauri
           args: ${{ matrix.args }}
+      - name: Actifact list
+        env:
+          RELEASE_ACTIFACTS: ${{steps.tauri-build.outputs.artifactPaths}}
+        run: |
+          for actifact in $RELEASE_ACTIFACTS; do
+            echo "Actifact: $actifact"
+          done
