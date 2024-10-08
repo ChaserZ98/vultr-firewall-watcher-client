@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-build:
+  test-desktop-build:
     if: ${{ !startsWith(github.head_ref, 'release/')}}
     permissions:
       contents: write
@@ -69,3 +69,54 @@ jobs:
             for (const artifact of artifactArray) {
               console.log(`Artifact: ${artifact}`);
             }
+  test-android-build:
+    if: ${{ !startsWith(github.head_ref, 'release/')}}
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    environment: Release
+    env:
+      JAVA_DISTRIBUTION: 'adopt'
+      JAVA_VERSION: 17
+      NDK_VERSION: 27.1.12297006
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{env.JAVA_DISTRIBUTION}}
+          java-version: ${{env.JAVA_VERSION}}
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install NDK
+        run: |
+          sdkmanager "ndk;$NDK_VERSION"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> $GITHUB_ENV
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+      - name: Setup Android sining
+        run: |
+          ANDROID_DIRECTORY=src-tauri/gen/android
+          echo "keyAlias=${{secrets.ANDROID_KEY_ALIAS}}" > $ANDROID_DIRECTORY/keystore.properties
+          echo "password=${{secrets.ANDROID_KEY_PASSWORD}}" >> $ANDROID_DIRECTORY/keystore.properties
+          base64 -d <<< ${{secrets.ANDROID_KEY_BASE64}} > $RUNNER_TEMP/keystore.jks
+          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> $ANDROID_DIRECTORY/keystore.properties
+      - name: Build Android bundle
+        run: |
+          bun run tauri android build -v --config src-tauri/build-config/tauri.android.conf.json
+      - name: Build Android APK per abi
+        run: |
+          bun run tauri android build -v --config src-tauri/build-config/tauri.android.conf.json --apk --split-per-abi
