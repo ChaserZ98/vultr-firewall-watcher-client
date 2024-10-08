@@ -9,7 +9,7 @@
                 "displayLanguageSelector": true,
                 "installMode": "both",
                 "languages": ["English", "SimpChinese"],
-                "installerIcon": "./src-tauri/icons/icon.ico"
+                "installerIcon": "icons/icon.ico"
             }
         }
     },
