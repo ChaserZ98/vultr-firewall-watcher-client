@@ -16,10 +16,10 @@ val tauriProperties = Properties().apply {
 
 android {
     compileSdk = 34
-    namespace = "com.vultr_firewall_watcher_client.app"
+    namespace = "com.chaserz98.vultr_firewall_watcher"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "com.vultr_firewall_watcher_client.app"
+        applicationId = "com.chaserz98.vultr_firewall_watcher"
         minSdk = 24
         targetSdk = 34
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()

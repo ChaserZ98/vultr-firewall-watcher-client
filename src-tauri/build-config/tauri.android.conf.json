@@ -4,5 +4,10 @@
         "android": {
             "minSdkVersion": 24
         }
+    },
+    "app": {
+        "security": {
+            "capabilities": ["mobile"]
+        }
     }
 }
