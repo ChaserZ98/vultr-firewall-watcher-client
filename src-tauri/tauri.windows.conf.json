@@ -1,17 +1,5 @@
 {
     "identifier": "com.chaserz98.vultr-firewall-watcher-dev",
-    "bundle": {
-        "windows": {
-            "wix": {
-                "language": ["en-US", "zh-CN"]
-            },
-            "nsis": {
-                "displayLanguageSelector": true,
-                "installMode": "both",
-                "languages": ["English", "SimpChinese"]
-            }
-        }
-    },
     "app": {
         "windows": [
             {

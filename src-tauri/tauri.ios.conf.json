@@ -1,10 +1,5 @@
 {
     "identifier": "com.chaserz98.vultr-firewall-watcher-dev",
-    "bundle": {
-        "iOS": {
-            "minimumSystemVersion": "13.0"
-        }
-    },
     "app": {
         "security": {
             "capabilities": ["mobile"]
