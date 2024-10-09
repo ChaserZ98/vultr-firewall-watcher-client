@@ -108,12 +108,22 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
       - name: Setup Android signing
+        env:
+          ANDROID_DIRECTORY: src-tauri/gen/android
+          STORE_FILE: build-test-keystore.jks
+          STORE_PASS: test-build
+          KEY_ALIAS: test
+          KEY_CN: test
+          KEY_OU: test
+          KEY_O: test
+          KEY_L: test
+          KEY_ST: test
+          KEY_C: test
         run: |
-          keytool -genkey -v -keystore $RUNNER_TEMP/build-test-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias test -dname "CN=Feiyu Zheng, OU=Vultr Firewall Watcher Test, O=chaserz98.com, L=github, ST=github.com, C=CN" -storepass "test-build"
-          ANDROID_DIRECTORY=src-tauri/gen/android
-          echo "keyAlias=test" > $ANDROID_DIRECTORY/keystore.properties
-          echo "password=test-build" >> $ANDROID_DIRECTORY/keystore.properties
-          echo "storeFile=$RUNNER_TEMP/build-test-keystore" >> $ANDROID_DIRECTORY/keystore.properties
+          keytool -genkey -v -keystore $RUNNER_TEMP/$STORE_FILE -keyalg RSA -keysize 2048 -validity 7 -alias $KEY_ALIAS -dname "CN=$KEY_CN, OU=$KEY_OU, O=$KEY_O, L=$KEY_L, ST=$KEY_ST, C=$KEY_C" -storepass $STORE_PASS
+          echo "keyAlias=$KEY_ALIAS" > $ANDROID_DIRECTORY/keystore.properties
+          echo "password=$STORE_PASS" >> $ANDROID_DIRECTORY/keystore.properties
+          echo "storeFile=$RUNNER_TEMP/$STORE_FILE" >> $ANDROID_DIRECTORY/keystore.properties
       - name: Build Android bundle
         run: |
           bun run tauri android build -v --config src-tauri/build-config/tauri.android.conf.json
