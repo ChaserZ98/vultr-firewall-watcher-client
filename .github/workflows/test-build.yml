@@ -74,7 +74,6 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-22.04
-    environment: Release
     env:
       JAVA_DISTRIBUTION: 'adopt'
       JAVA_VERSION: 17
@@ -110,11 +109,11 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Setup Android signing
         run: |
+          keytool -genkey -v -keystore $RUNNER_TEMP/build-test-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias test -dname "CN=Feiyu Zheng, OU=Vultr Firewall Watcher Test, O=chaserz98.com, L=github, ST=github.com, C=CN" -storepass "test-build"
           ANDROID_DIRECTORY=src-tauri/gen/android
-          echo "${{secrets.ANDROID_KEY_BASE64}}" | base64 -d > $RUNNER_TEMP/keystore.jks
-          echo "keyAlias=${{secrets.ANDROID_KEY_ALIAS}}" > $ANDROID_DIRECTORY/keystore.properties
-          echo "password=${{secrets.ANDROID_KEY_PASSWORD}}" >> $ANDROID_DIRECTORY/keystore.properties
-          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> $ANDROID_DIRECTORY/keystore.properties
+          echo "keyAlias=test" > $ANDROID_DIRECTORY/keystore.properties
+          echo "password=test-build" >> $ANDROID_DIRECTORY/keystore.properties
+          echo "storeFile=$RUNNER_TEMP/build-test-keystore" >> $ANDROID_DIRECTORY/keystore.properties
       - name: Build Android bundle
         run: |
           bun run tauri android build -v --config src-tauri/build-config/tauri.android.conf.json
