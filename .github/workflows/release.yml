@@ -203,7 +203,7 @@ jobs:
                 repo: context.repo.repo,
                 release_id: process.env.RELEASE_ID,
                 name: file,
-                data: fs.createReadStream(path.join(process.env.RUNNER_TEMP, file))
+                data: fs.readFileSync(path.join(process.env.RUNNER_TEMP, file))
               });
             }
             console.log('All files uploaded.');
