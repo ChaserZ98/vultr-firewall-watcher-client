@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   create-release:
@@ -173,10 +174,10 @@ jobs:
             mv $apk $RUNNER_TEMP/$new_filename
             echo "Renamed APK: $RUNNER_TEMP/$new_filename"
           done
-      - name: Build Android bundle
+      - name: Build Android universal APK
         run: |
           bun run tauri android build -v --config src-tauri/build-config/tauri.android.conf.json --apk
-      - name: Rename universal APK and AAB
+      - name: Rename universal APK
         run: |
           output_dir=src-tauri/gen/android/app/build/outputs
           universal_apk_path=$output_dir/apk/universal/release/app-universal-release.apk
@@ -187,15 +188,6 @@ jobs:
           echo "Found universal APK: $universal_apk_path"
           mv $universal_apk_path ${RUNNER_TEMP}/Vultr.Firewall.Watcher_${RELEASE_VERSION}_universal.apk
           echo "Renamed universal APK: ${RUNNER_TEMP}/Vultr.Firewall.Watcher_${RELEASE_VERSION}_universal.apk"
-
-          universal_aab_path=$output_dir/bundle/universalRelease/app-universal-release.aab
-          if [ ! -f $universal_aab_path ]; then
-            echo "Universal AAB not found at $universal_aab_path"
-            exit 1
-          fi
-          echo "Found universal AAB: $universal_aab_path"
-          mv $universal_aab_path ${RUNNER_TEMP}/Vultr.Firewall.Watcher_${RELEASE_VERSION}_universal.aab
-          echo "Renamed universal AAB: ${RUNNER_TEMP}/Vultr.Firewall.Watcher_${RELEASE_VERSION}_universal.aab"
       - name: Upload artifacts to release asset
         uses: actions/github-script@v7
         with:
