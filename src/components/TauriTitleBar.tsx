@@ -103,7 +103,15 @@ export default function TauriTitleBar() {
         const isModeDev = currentMode === "development";
 
         logging.info(`Current Platform: ${environment}`);
+        logging.info(`User Agent: ${navigator.userAgent}`);
         logging.info(`Current Mode: ${currentMode}`);
+
+        if (
+            [Environment.IOS, Environment.ANDROID, Environment.WEB].includes(
+                environment
+            )
+        )
+            return;
 
         Window.getByLabel(mainWindowLabel).then((window) => {
             mainWindowRef.current = window;
