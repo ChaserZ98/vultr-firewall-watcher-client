@@ -3,7 +3,11 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { Spinner } from "@nextui-org/react";
 
-const App = lazy(() => import("@/App.tsx"));
+import { AppErrorElement } from "@/App.tsx";
+
+const App = lazy(() =>
+    import("@/App.tsx").then((module) => ({ default: module.App }))
+);
 const Home = lazy(() => import("@/pages/Home.tsx"));
 const Settings = lazy(() => import("@/pages/Settings.tsx"));
 const MyIP = lazy(() => import("@/pages/MyIP.tsx"));
@@ -30,6 +34,7 @@ const router = createBrowserRouter([
                 <App />
             </Loading>
         ),
+        errorElement: <AppErrorElement />,
         children: [
             {
                 path: "/",

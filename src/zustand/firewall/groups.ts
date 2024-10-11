@@ -142,7 +142,7 @@ function refreshGroups(
                     `Failed to fetch firewall groups: ${
                         timeoutSignal.aborted
                             ? timeoutSignal.reason.message
-                            : err.message
+                            : err.message || err
                     }`
                 );
 
