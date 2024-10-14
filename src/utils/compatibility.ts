@@ -17,11 +17,20 @@ class CompatibilityError extends Error {
 }
 
 function check(tests: string[]) {
+    const checked = new Set();
     for (const test of tests) {
-        if (eval(test) === undefined) {
-            throw new CompatibilityError(
-                `Your browser/webview does not support ${test}. Please update your browser/webview and try again.`
-            );
+        const parts = test.split(".");
+        let cur: any = window;
+        let allPart = parts[0];
+        for (const part of parts) {
+            if (!checked.has(allPart) && cur[part] === undefined)
+                throw new CompatibilityError(
+                    `Your browser/webview does not support ${test}. Please update your browser/webview and try again.`
+                );
+
+            checked.add(allPart);
+            allPart += `.${part}`;
+            cur = cur[part];
         }
     }
 }
