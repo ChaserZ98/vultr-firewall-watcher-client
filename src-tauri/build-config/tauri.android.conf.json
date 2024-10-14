@@ -1,0 +1,13 @@
+{
+    "identifier": "com.chaserz98.vultr-firewall-watcher",
+    "bundle": {
+        "android": {
+            "minSdkVersion": 24
+        }
+    },
+    "app": {
+        "security": {
+            "capabilities": ["mobile"]
+        }
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "identifier": "com.chaserz98.vultr-firewall-watcher",
+    "app": {
+        "security": {
+            "capabilities": ["mobile"]
+        }
+    }
+}
